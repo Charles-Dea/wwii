@@ -3,7 +3,6 @@
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-#include<unistd.h>
 #include"grphcs.h"
 #include"menu.h"
 #include"net.h"

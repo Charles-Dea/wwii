@@ -1,5 +1,7 @@
+#include<windows.h>
 #include<GL/gl.h>
 #include<malloc.h>
+#include<stdio.h>
 #include<string.h>
 #include"grphcs.h"
 #include"main.h"
