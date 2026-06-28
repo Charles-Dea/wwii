@@ -3,17 +3,11 @@
 #include<stdlib.h>
 #include<string.h>
 #include"grphcs.h"
-#include"main.h"
 #include"net.h"
 #include"win.h"
 #include"unit.h"
 #define INFMVSPD .21867
 #define INFICNSZ .1
-enum{
-	UFLAGS_ALLIED=0b1,
-	UFLAGS_SEL=0b10,
-	UFLAGS_ACTED=0b100,
-};
 uint16_t unit_sel;
 bool unit_allied;
 bool unit_pltrn;
@@ -81,7 +75,7 @@ void mkunit(const float x,const float y,const bool allied){
 		const relpos_t r0rp={
 			.eid=r0,
 			.prnt=eid,
-			.z=1,
+			.z=.9,
 		};
 		arrlst_add(&relposes,&r0rp);
 		const col_t r0c={
@@ -95,12 +89,12 @@ void mkunit(const float x,const float y,const bool allied){
 		};
 		arrlst_add(&rings,&r0r);
 		wpns=malloc(nwpns*sizeof(wpn_t));
-		wpns[0].acc=.0025;
+		wpns[0].acc=.005;
 		wpns[0].rng=3;
 		wpns[0].rpm=150;
 		wpns[0].num=1;
 		const uint16_t w1=mkwpn(wpns,rngs+1,r0+1,eid,INFICNSZ/4);
-		wpns[1].acc=.005;
+		wpns[1].acc=.01;
 		wpns[1].rng=1;
 		wpns[1].rpm=30;
 		wpns[1].num=11;
@@ -114,7 +108,7 @@ void mkunit(const float x,const float y,const bool allied){
 		const relpos_t r0rp={
 			.eid=r0,
 			.prnt=eid,
-			.z=1,
+			.z=.9,
 		};
 		arrlst_add(&relposes,&r0rp);
 		const col_t r0c={
@@ -128,17 +122,17 @@ void mkunit(const float x,const float y,const bool allied){
 		};
 		arrlst_add(&rings,&r0r);
 		wpns=malloc(3*sizeof(wpn_t));
-		wpns[0].acc=.0015;
+		wpns[0].acc=.003;
 		wpns[0].rng=4;
 		wpns[0].rpm=225;
 		wpns[0].num=1;
 		const uint16_t w1=mkwpn(wpns,rngs+1,r0+1,eid,INFICNSZ/3);
-		wpns[1].acc=.0001;
+		wpns[1].acc=.0002;
 		wpns[1].rng=.4;
 		wpns[1].rpm=100;
 		wpns[1].num=2;
 		const uint16_t w2=mkwpn(wpns+1,rngs+2,w1,eid,0);
-		wpns[2].acc=.0075;
+		wpns[2].acc=.015;
 		wpns[2].rng=1;
 		wpns[2].rpm=18;
 		wpns[2].num=7;
@@ -153,6 +147,7 @@ void mkunit(const float x,const float y,const bool allied){
 		.nwpns=nwpns,
 		.rings=rngs,
 		.nrings=nrngs,
+		.morale=1,
 	};
 	arrlst_add(&udatas,&udata);
 	neweid=neid;
@@ -163,9 +158,14 @@ int8_t unit_move(const uint16_t eid,const float x,const float y){
 		fprintf(stderr,"ERROR: entity %hu has no position\n",eid);
 		return E_NO_ENT;
 	}
+	udata_t*const u=getent(&udatas,eid);
+	if(!u){
+		fprintf(stderr,"ERROR: entity %hu has no udata\n",eid);
+		return E_NO_ENT;
+	}
 	const float dx=x-p->x;
 	const float dy=y-p->y;
-	if(sqrtf(dx*dx+dy*dy)>INFMVSPD){
+	if(sqrtf(dx*dx+dy*dy)>INFMVSPD*u->morale){
 		return E_SUCC;
 	}
 	p->x=x;
@@ -173,11 +173,6 @@ int8_t unit_move(const uint16_t eid,const float x,const float y){
 	const int8_t err=unit_deselct(eid);
 	if(err){
 		fprintf(stderr,"WARNING: failed to deselect entity %hu with error code %hhu\n",eid,err);
-	}
-	udata_t*const u=getent(&udatas,eid);
-	if(!u){
-		fprintf(stderr,"ERROR: entity %hu has no udata\n",eid);
-		return E_NO_ENT;
 	}
 	const int8_t flags=u->flags|UFLAGS_ACTED;
 	u->flags=flags;
@@ -200,7 +195,7 @@ int8_t unit_fire(const uint16_t trgt){
 		fprintf(stderr,"ERROR: entity %hu has no udata\n",shtr);
 		return E_NO_ENT;
 	}
-	const udata_t*const tu=getent(&udatas,trgt);
+	udata_t*const tu=getent(&udatas,trgt);
 	if(!tu){
 		fprintf(stderr,"ERROR: entity %hu has no udata\n",trgt);
 		return E_NO_ENT;
@@ -218,18 +213,50 @@ int8_t unit_fire(const uint16_t trgt){
 	const float d=sqrtf(dx*dx+dy*dy);
 	const wpn_t*wi=su->wpns;
 	const wpn_t*const __restrict wend=wi+su->nwpns;
+	const double smrl=su->morale;
+	double cvr=1;
+	for(const hedge_t*i=hedges.buf,*const __restrict end=i+hedges.nels;i<end;i++){
+		const line_t*const l=getent(&lines,i->eid);
+		if(!l){
+			fprintf(stderr,"WARNING: entity %hu has no line\n",i->eid);
+			continue;
+		}
+		const float x1=l->x1;
+		const float y1=l->y1;
+		const float x=(x1+l->x0)/2;
+		const float y=(y1+l->y0)/2;
+		const float dx=x1-x;
+		const float dy=y1-y;
+		const float hl=sqrtf(dx*dx+dy*dy);
+		const float hw=l->width/2;
+		const float tdx=tp.x-x;
+		const float tdy=tp.y-y;
+		const float td=sqrtf(tdx*tdx+tdy*tdy);
+		const float a=atan2f(tdy,tdx)-atan2f(dy,dx);
+		const float tx=cosf(a)*d;
+		const float ty=sinf(a)*d;
+		if(tx<=hl&&tx>=-hl&&ty<=hw&&ty>=-hw){
+			cvr=.3;
+			break;
+		}
+	}
 	bool fired=0;
 	uint8_t hits=0;
+	double mrlchng=0;
 	for(;wi<wend;wi++){
 		const uint8_t num=wi->num;
+		const float rng=wi->rng;
 		if(d>wi->rng||!num){
 			continue;
 		}
 		fired=1;
-		const uint32_t acc=wi->acc*UINT32_MAX;
+		const uint32_t acc=wi->acc*smrl*(1-d/rng)*cvr*UINT32_MAX;
+		const uint16_t rpm=(double)wi->rpm*smrl;
+		mrlchng-=rpm*.0005;
 		for(uint16_t _=wi->rpm*num;_;_--){
 			if((uint32_t)rand()<=acc){
 				hits++;
+				mrlchng-=.05;
 			}
 		}
 	}
@@ -292,11 +319,17 @@ int8_t unit_fire(const uint16_t trgt){
 				}
 			}
 		}
-		net_dmg(trgt,nums,tnwpns);
+		unit_chmrl(tu,mrlchng);
+		net_dmg(trgt,nums,tnwpns,mrlchng);
 	}
 	err=unit_deselct(shtr);
 	if(err){
-		fprintf(stderr,"ERROR: failed to deselect entity %hu with error code %hhd\n",shtr,err);
+		fprintf(
+			stderr,
+			"ERROR: failed to deselect entity %hu with error code %hhd\n",
+			shtr,
+			err
+		);
 		return err;
 	}
 	tex_t*const t=getent(&texes,shtr);
@@ -306,6 +339,18 @@ int8_t unit_fire(const uint16_t trgt){
 		fprintf(stderr,"WARNING: entity %hu has no texture\n",shtr);
 	}
 	return E_SUCC;
+}
+void unit_nxtrn(const bool ald){
+	udata_t*i=udatas.buf;
+	const udata_t*const __restrict end=i+udatas.nels;
+	for(;i<end;i++){
+		const int8_t flags=i->flags&~UFLAGS_ACTED;
+		if((flags&UFLAGS_ALLIED)==ald){
+			i->flags=flags;
+			unit_chmrl(i,.1);
+			unit_deselct(i->eid);
+		}
+	}
 }
 int8_t unit_deselct(const uint16_t eid){
 	tex_t*const t=getent(&texes,eid);
@@ -343,36 +388,25 @@ int8_t unit_deselct(const uint16_t eid){
 	unit_sel=0;
 	return E_SUCC;
 }
-void unit_rstactd(){
-	udata_t*i=udatas.buf;
-	const udata_t*const __restrict end=i+udatas.nels;
-	for(;i<end;i++){
-		const int8_t flags=i->flags&~UFLAGS_ACTED;
-		i->flags=flags;
-		tex_t*const t=getent(&texes,i->eid);
-		if(t){
-			t->tex=flags&UFLAGS_ALLIED?TEX_ALLIEDINF:TEX_AXISINF;
-		}else{
-			fprintf(stderr,"WARNING: entity %hu has no texture\n",i->eid);
-		}
+void unit_chmrl(udata_t*const u,const double mrld){
+	double mrl=u->morale+mrld;
+	if(mrl<=0){
+		mrl=0;
+	}else if(mrl>=1){
+		mrl=1;
+	}
+	u->morale=mrl;
+	ring_t*const r=getent(&rings,u->rings[0]);
+	if(r){
+		r->r=INFMVSPD*mrl;
+	}else{
+		fprintf(stderr,"WARNING: entity %hu has no radius\n",u->rings[0]);
 	}
 }
 static void delunit(const udata_t*const u){
 	delent(u->arr);
-	const wpn_t*const wpns=u->wpns;
-	for(const wpn_t*i=wpns,*const __restrict end=i+u->nwpns;i<end;i++){
-		const uint16_t sprt1=i->sprt1;
-		if(sprt1){
-			delent(sprt1);
-		}
-		delent(i->sprt0);
-	}
 	free(u->wpns);
-	const uint16_t*const rngs=u->rings;
-	for(const uint16_t*i=rngs,*const end=i+u->nrings;i<end;i++){
-		delent(*i);
-	}
-	free(rngs);
+	free(u->rings);
 }
 static int8_t tglsel(const uint16_t eid){
 	const udata_t*const u=getent(&udatas,eid);
@@ -408,11 +442,14 @@ static int8_t selct(const uint16_t eid){
 	const uint16_t*i=u->rings;
 	const uint16_t*const __restrict end=i+u->nrings;
 	for(;i<end;i++){
-		col_t*const col=getent(&cols,*i);
-		if(col){
-			col->a=1;
-		}else{
-			fprintf(stderr,"WARNING: entity %hu has no color\n",*i);
+		const uint16_t ring=*i;
+		if(ring){
+			col_t*const col=getent(&cols,ring);
+			if(col){
+				col->a=1;
+			}else{
+				fprintf(stderr,"WARNING: entity %hu has no color\n",ring);
+			}
 		}
 	}
 	if(unit_sel&&unit_sel!=eid){
@@ -431,7 +468,7 @@ static uint16_t mkwpn(wpn_t*const __restrict w,uint16_t*const __restrict ri,uint
 		.prnt=unit,
 		.x=0,
 		.y=0,
-		.z=1,
+		.z=.9,
 	};
 	arrlst_add(&relposes,&rp);
 	const col_t col={

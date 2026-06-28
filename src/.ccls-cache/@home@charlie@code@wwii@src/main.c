@@ -3,15 +3,17 @@
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-#include<unistd.h>
+#include"flag.h"
 #include"grphcs.h"
 #include"menu.h"
 #include"net.h"
 #include"unit.h"
 #include"win.h"
-#include"main.h"
 #define SBS 8
 double scrnwdth,scrnhght;
+uint16_t neweid=1;
+bool running=1;
+uint8_t reqcptr;
 arrlst_t poses={
 	.bs=SBS*sizeof(pos_t),
 	.es=sizeof(pos_t),
@@ -60,8 +62,18 @@ arrlst_t txtboxes={
 	.bs=SBS*sizeof(txtbox_t),
 	.es=sizeof(txtbox_t),
 };
-uint16_t neweid=1;
-bool running=1;
+arrlst_t flags={
+	.bs=SBS*sizeof(flag_t),
+	.es=sizeof(flag_t),
+};
+arrlst_t lines={
+	.bs=SBS*sizeof(line_t),
+	.es=sizeof(line_t),
+};
+arrlst_t hedges={
+	.bs=SBS*sizeof(hedge_t),
+	.es=sizeof(hedge_t),
+};
 static arrlst_t*const comps[]={
 	&poses,
 	&dims,
@@ -75,6 +87,9 @@ static arrlst_t*const comps[]={
 	&arrows,
 	&rects,
 	&txtboxes,
+	&flags,
+	&lines,
+	&hedges,
 };
 int main(){
 	srand(time(NULL));
@@ -94,6 +109,15 @@ int main(){
 	while(running&&!glfwWindowShouldClose(win)){
 		glfwPollEvents();
 		net_lstn();
+		grphcs_mvcam(win);
+		if(menu_scene==SCENE_GAME){
+			flag_update();
+			if(flag_cptrd()>=reqcptr){
+				const bool wnrald=unit_allied;
+				menu_endscrn(wnrald);
+				net_dscnct(wnrald);
+			}
+		}
 		grphcs_draw(win);
 	}
 	termscene();
@@ -133,7 +157,8 @@ void termscene(){
 	for(uint16_t i=neweid;i;i--){
 		delent(i);
 	}
-	for(arrlst_t*const*i=comps,*const*const __restrict end=comps+sizeof(comps)/8;i<end;i++){
+	for(arrlst_t*const*i=comps,*const*const __restrict end=comps+sizeof(comps)/8;i<end;i++)
+	{
 		arrlst_t*const a=*i;
 		free(a->buf);
 		const uint64_t nbs=SBS*a->es;
@@ -146,6 +171,9 @@ void termscene(){
 	win_rclk=NULL;
 	win_seltxtbox=0;
 	unit_sel=0;
+	grphcs_camx=0;
+	grphcs_camy=0;
+	grphcs_zoom=1;
 }
 void delent(const uint16_t eid){
 	arrlst_t*const*i=comps;

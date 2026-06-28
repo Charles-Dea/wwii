@@ -1,6 +1,7 @@
 #ifndef GRPHCS_H
 #define GRPHCS_H
 #include"win.h"
+#define GRPHCS_CAMSPD .05
 enum{
 	TEX_NULL,
 	TEX_ALLIEDINF,
@@ -14,6 +15,9 @@ enum{
 	TEX_HOST,
 	TEX_JOIN,
 	TEX_WTNG,
+	TEX_AMRCN,
+	TEX_GRMN,
+	TEX_VCTRY,
 	TEX_0,
 	TEX_1,
 	TEX_2,
@@ -27,7 +31,9 @@ enum{
 	TEX_DOT,
 	TEX_MAX
 };
-void grphcs_init();
+extern double grphcs_camx,grphcs_camy,grphcs_zoom;
+void grphcs_init(void);
+void grphcs_mvcam(GLFWwindow*__restrict);
 void grphcs_draw(GLFWwindow*__restrict);
-void grphcs_term();
+void grphcs_term(void);
 #endif

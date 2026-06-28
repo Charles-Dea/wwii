@@ -1,4 +1,6 @@
+#ifdef _WIN32
 #include<windows.h>
+#endif
 #include<GL/glew.h>
 #define _USE_MATH_DEFINES
 #include<math.h>
@@ -6,8 +8,15 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include<stb_image.h>
 #include"main.h"
+#include"menu.h"
 #include"grphcs.h"
-static uint32_t sprtshad,sprvbo,sprvao,sprebo,ringshad,ringvbo,ringvao,ringebo,arrshad,arrvbo,arrvao,rectshad,rectvbo,rectvao,rectebo;
+double grphcs_camx,grphcs_camy;
+double grphcs_zoom=1;
+static uint32_t sprtshad,sprvbo,sprvao,sprebo;
+static uint32_t ringshad,ringvbo,ringvao,ringebo;
+static uint32_t arrshad,arrvbo,arrvao;
+static uint32_t rectshad,rectvbo,rectvao,rectebo;
+static uint32_t lnshad,lnvbo,lnvao,lnebo;
 static int32_t buildshad(const char*__restrict,const char*__restrict);
 static int32_t compshad(uint32_t,uint32_t,const char*__restrict);
 static int8_t loadtex(const char*__restrict);
@@ -47,6 +56,14 @@ void grphcs_init(){
 		glUniform1f(0,sr);
 		rectshad=res;
 	}
+	const int32_t lns=buildshad("shaders/line.vert.glsl","shaders/line.frag.glsl");
+	if(lns&0x80000000){
+		fputs("WARNING: failed to build rect shader program\n",stderr);
+	}else{
+		glUseProgram(lns);
+		glUniform1f(0,sr);
+		lnshad=lns;
+	}
 	if(loadtex("res/alliedinf.png")){
 		fputs("WARNING: failed to load texture for Allied infantry\n",stderr);
 	}
@@ -79,6 +96,15 @@ void grphcs_init(){
 	}
 	if(loadtex("res/waiting.png")){
 		fputs("WARNING: failed to load texture for waiting sprite\n",stderr);
+	}
+	if(loadtex("res/american.png")){
+		fputs("WARNING: failed to load texture for word \"AMERICAN\"\n",stderr);
+	}
+	if(loadtex("res/german.png")){
+		fputs("WARNING: failed to load texture for word \"GERMAN\"\n",stderr);
+	}
+	if(loadtex("res/victory.png")){
+		fputs("WARNING: failed to load texture for word \"VICTORY\"\n",stderr);
 	}
 	char path[]="res/0.png";
 	for(char i='0';i<='9';){
@@ -135,6 +161,48 @@ void grphcs_init(){
 	glVertexAttribPointer(1,4,GL_FLOAT,0,(3+4)*4,(void*)(3*4));
 	rectvao=va;
 	rectebo=mkbuf(GL_ELEMENT_ARRAY_BUFFER);
+	lnvbo=mkbuf(GL_ARRAY_BUFFER);
+	glGenVertexArrays(1,&va);
+	glBindVertexArray(va);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0,3,GL_FLOAT,0,(3+4+1+2)*4,0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1,4,GL_FLOAT,0,(3+4+1+2)*4,(void*)(3*4));
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2,1,GL_FLOAT,0,(3+4+1+2)*4,(void*)((3+4)*4));
+	glEnableVertexAttribArray(3);
+	glVertexAttribPointer(3,2,GL_FLOAT,0,(3+4+1+2)*4,(void*)((3+4+1)*4));
+	lnvao=va;
+	lnebo=mkbuf(GL_ELEMENT_ARRAY_BUFFER);
+}
+void grphcs_mvcam(GLFWwindow*const __restrict win){
+	if(menu_scene!=SCENE_GAME){
+		return;
+	}
+	double mx,my;
+	glfwGetCursorPos(win,&mx,&my);
+	if(mx<5){
+		grphcs_camx-=GRPHCS_CAMSPD/grphcs_zoom;
+	}else if(mx>scrnwdth-5){
+		grphcs_camx+=GRPHCS_CAMSPD/grphcs_zoom;
+	}
+	if(my<5){
+		grphcs_camy+=GRPHCS_CAMSPD/grphcs_zoom;
+	}else if(my>scrnhght-5){
+		grphcs_camy-=GRPHCS_CAMSPD/grphcs_zoom;
+	}
+	if(glfwGetKey(win,GLFW_KEY_LEFT)!=GLFW_RELEASE){
+		grphcs_camx-=GRPHCS_CAMSPD/grphcs_zoom;
+	}
+	if(glfwGetKey(win,GLFW_KEY_RIGHT)!=GLFW_RELEASE){
+		grphcs_camx+=GRPHCS_CAMSPD/grphcs_zoom;
+	}
+	if(glfwGetKey(win,GLFW_KEY_UP)!=GLFW_RELEASE){
+		grphcs_camy+=GRPHCS_CAMSPD/grphcs_zoom;
+	}
+	if(glfwGetKey(win,GLFW_KEY_DOWN)!=GLFW_RELEASE){
+		grphcs_camy-=GRPHCS_CAMSPD/grphcs_zoom;
+	}
 }
 void grphcs_draw(GLFWwindow*const __restrict win){
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -249,6 +317,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		er->br=br;
 	}
 	glUseProgram(rectshad);
+	glUniform3f(1,grphcs_camx,grphcs_camy,grphcs_zoom);
 	glBindBuffer(GL_ARRAY_BUFFER,rectvbo);
 	glBindVertexArray(rectvao);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,rectebo);
@@ -258,6 +327,139 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 	free(vborects);
 	free(eborects);
 	free(rcts.buf);
+	typedef struct{
+		float x,y,z0,z1,r,g,b,a,rot,hw,hl;
+	}ln_t;
+	arrlst_t lns={
+		.buf=malloc(8*sizeof(ln_t)),
+		.bs=8*sizeof(ln_t),
+		.es=sizeof(ln_t),
+	};
+	for(const line_t*i=lines.buf,*const __restrict end=i+lines.nels;i<end;i++){
+		const col_t*const col=getent(&cols,i->eid);
+		if(!col){
+			fprintf(stderr,"WARNING: entity %hu has no color\n",i->eid);
+		}
+		const float a=col->a;
+		if(!a){
+			continue;
+		}
+		const float x0=i->x0;
+		const float y0=i->y0;
+		const float x1=i->x1;
+		const float y1=i->y1;
+		const float x=(x0+x1)/2;
+		const float y=(y0+y1)/2;
+		const float dx=x1-x0;
+		const float dy=y1-y0;
+		const ln_t ln={
+			.x=x,
+			.y=y,
+			.z0=i->z0,
+			.z1=i->z1,
+			.r=col->r,
+			.g=col->g,
+			.b=col->b,
+			.a=a,
+			.rot=atan2f(y1-y,x1-x),
+			.hw=i->width/2,
+			.hl=sqrtf(dx*dx+dy*dy)/2,
+		};
+		arrlst_add(&lns,&ln);
+	}
+	typedef struct{
+		float x,y,z,r,g,b,a,rot,cx,cy;
+	}lnvrt_t;
+	typedef struct{
+		lnvrt_t tl,tr,bl,br;
+	}lnvbo_t;
+	const uint64_t vbolnsz=lns.nels*sizeof(lnvbo_t);
+	lnvbo_t*const vbolns=malloc(vbolnsz);
+	typedef struct{
+		uint32_t tl,tr0,bl0,tr1,bl1,br;
+	}lnebo_t;
+	const uint64_t ebolnsz=lns.nels*sizeof(lnebo_t);
+	lnebo_t*const ebolns=malloc(ebolnsz);
+	for(uint64_t i=0;i<lns.nels;i++){
+		const ln_t*const l=lns.buf+i*lns.es;
+		const float x=l->x;
+		const float y=l->y;
+		const float z0=l->z0;
+		const float z1=l->z1;
+		const float r=l->r;
+		const float g=l->g;
+		const float b=l->b;
+		const float a=l->a;
+		const float rot=l->rot;
+		const float hw=l->hw;
+		const float hl=l->hl;
+		const float left=x-hl;
+		const float rght=x+hl;
+		const float top=y+hw;
+		const float bot=y-hw;
+		lnvbo_t*const lnvbo=vbolns+i;
+		lnvbo->tl.x=left;
+		lnvbo->tl.y=top;
+		lnvbo->tl.z=z0;
+		lnvbo->tl.r=r;
+		lnvbo->tl.g=g;
+		lnvbo->tl.b=b;
+		lnvbo->tl.a=a;
+		lnvbo->tl.rot=rot;
+		lnvbo->tl.cx=x;
+		lnvbo->tl.cy=y;
+		lnvbo->tr.x=rght;
+		lnvbo->tr.y=top;
+		lnvbo->tr.z=z1;
+		lnvbo->tr.r=r;
+		lnvbo->tr.g=g;
+		lnvbo->tr.b=b;
+		lnvbo->tr.a=a;
+		lnvbo->tr.rot=rot;
+		lnvbo->tr.cx=x;
+		lnvbo->tr.cy=y;
+		lnvbo->bl.x=left;
+		lnvbo->bl.y=bot;
+		lnvbo->bl.z=z0;
+		lnvbo->bl.r=r;
+		lnvbo->bl.g=g;
+		lnvbo->bl.b=b;
+		lnvbo->bl.a=a;
+		lnvbo->bl.rot=rot;
+		lnvbo->bl.cx=x;
+		lnvbo->bl.cy=y;
+		lnvbo->br.x=rght;
+		lnvbo->br.y=bot;
+		lnvbo->br.z=z1;
+		lnvbo->br.r=r;
+		lnvbo->br.g=g;
+		lnvbo->br.b=b;
+		lnvbo->br.a=a;
+		lnvbo->br.rot=rot;
+		lnvbo->br.cx=x;
+		lnvbo->br.cy=y;
+		const uint32_t tl=i*4;
+		const uint32_t tr=tl+1;
+		const uint32_t bl=tr+1;
+		lnebo_t*const lnebo=ebolns+i;
+		lnebo->tl=tl;
+		lnebo->tr0=tr;
+		lnebo->bl0=bl;
+		lnebo->tr1=tr;
+		lnebo->bl1=bl;
+		lnebo->br=bl+1;
+	}
+	glUseProgram(lnshad);
+	glUniform3f(1,grphcs_camx,grphcs_camy,grphcs_zoom);
+	glBindBuffer(GL_ARRAY_BUFFER,lnvbo);
+	glBindVertexArray(lnvao);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,lnebo);
+	glBufferData(GL_ARRAY_BUFFER,vbolnsz,vbolns,GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER,ebolnsz,ebolns,GL_STATIC_DRAW);
+	glDrawElements(GL_TRIANGLES,lns.nels*6,GL_UNSIGNED_INT,0);
+	free(lns.buf);
+	free(vbolns);
+	free(ebolns);
 	arrlst_t sprites[TEX_MAX];
 	typedef struct{
 		float x,y,z,w,h;
@@ -302,6 +504,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		arrlst_add(sprites+tex,&sprt);
 	}
 	glUseProgram(sprtshad);
+	glUniform3f(1,grphcs_camx,grphcs_camy,grphcs_zoom);
 	for(uint64_t i=1;i<TEX_MAX;i++){
 		glBindTexture(GL_TEXTURE_2D,i);
 		typedef struct{
@@ -497,6 +700,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		e->br=base+3;
 	}
 	glUseProgram(ringshad);
+	glUniform3f(1,grphcs_camx,grphcs_camy,grphcs_zoom);
 	glBindBuffer(GL_ARRAY_BUFFER,ringvbo);
 	glBindVertexArray(ringvao);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,ringebo);
@@ -567,12 +771,13 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		const float g=ar->g;
 		const float b=ar->b;
 		const float a=ar->a;
-		double dcx,dcy;
-		glfwGetCursorPos(win,&dcx,&dcy);
+		p2d_t dcp;
+		glfwGetCursorPos(win,&dcp.x,&dcp.y);
+		dcp=win_glfw2ndc(dcp);
 		const float sh=scrnhght;
 		const float hfsh=sh/2;
-		const float cx=dcx/hfsh-(float)scrnwdth/sh;
-		const float cy=-(dcy/hfsh-1);
+		const float cx=dcp.x;
+		const float cy=dcp.y;
 		const float angl=atan2f(cy-y,cx-x);
 		const float angla=angl+M_PI/2;
 		const float anglb=angl+3*M_PI/2;
@@ -600,6 +805,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		t->c.a=a;
 	}
 	glUseProgram(arrshad);
+	glUniform3f(1,grphcs_camx,grphcs_camy,grphcs_zoom);
 	glBindBuffer(GL_ARRAY_BUFFER,arrvbo);
 	glBufferData(GL_ARRAY_BUFFER,trisz,tris,GL_DYNAMIC_DRAW);
 	glBindVertexArray(arrvao);
@@ -613,25 +819,34 @@ void grphcs_term(){
 		texes[i]=i+1;
 	}
 	glDeleteTextures(TEX_MAX-1,texes);
-	const uint32_t bufs[]={sprvbo,sprebo,ringvbo,ringebo,arrvbo};
+	const uint32_t bufs[]={
+		sprvbo,sprebo,
+		ringvbo,ringebo,
+		arrvbo,
+		rectvbo,rectebo,
+		lnvbo,lnebo,
+	};
 	glDeleteBuffers(sizeof(bufs)/4,bufs);
 	glBindVertexArray(sprvao);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(0);
-	glDeleteVertexArrays(1,&sprvao);
 	glBindVertexArray(ringvao);
 	glDisableVertexAttribArray(3);
 	glDisableVertexAttribArray(2);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(0);
-	glDeleteVertexArrays(1,&ringvao);
 	glBindVertexArray(arrvao);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(0);
-	glDeleteVertexArrays(1,&arrvao);
+	glBindVertexArray(rectvao);
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(0);
+	uint32_t vaos[]={sprvao,ringvao,arrvao,rectvao,lnvao};
+	glDeleteVertexArrays(sizeof(vaos)/4,vaos);
 	glDeleteProgram(sprtshad);
 	glDeleteProgram(ringshad);
 	glDeleteProgram(arrshad);
+	glDeleteProgram(rectshad);
 }
 static int32_t buildshad(const char*const __restrict vs,const char*const __restrict fs){
 	const int32_t prog=glCreateProgram();
@@ -674,7 +889,7 @@ static int32_t compshad(const uint32_t prog,const uint32_t type,const char*const
 		glGetShaderiv(shad,GL_INFO_LOG_LENGTH,&infloglen);
 		char err[infloglen];
 		glGetShaderInfoLog(shad,infloglen,&infloglen,err);
-		fprintf(stderr,"ERROR: %s compiled with error(s):\n%s\n",fn,err);
+		fprintf(stderr,"ERROR: %s compiled with error(s):\n%s",fn,err);
 		return E_SHAD_COMP_FAIL;
 	}
 	glAttachShader(prog,shad);

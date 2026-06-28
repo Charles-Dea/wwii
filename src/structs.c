@@ -19,7 +19,11 @@ void arrlst_add(arrlst_t*const __restrict arr,const void*const __restrict new){
 	memcpy(arr->buf+els*es,new,es);
 	arr->nels=ne;
 }
-int8_t arrlst_insrt(arrlst_t*const __restrict arr,const void*const __restrict new,const uint64_t idx){
+int8_t arrlst_insrt(
+		arrlst_t*const __restrict arr,
+		const void*const __restrict new,
+		const uint64_t idx
+		){
 	const uint64_t els=arr->nels;
 	if(idx>els){
 		return E_OUT_OF_RANGE;

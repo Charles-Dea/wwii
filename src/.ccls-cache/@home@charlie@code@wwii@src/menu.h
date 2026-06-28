@@ -8,8 +8,10 @@ enum{
 	SCENE_WTNG,
 	SCENE_INPTIP,
 	SCENE_GAME,
+	SCENE_ENDSCRN,
 };
 extern uint8_t menu_scene;
-void menu_main();
-void menu_strtgm();
+void menu_main(void);
+void menu_strtgm(void);
+void menu_endscrn(bool);
 #endif

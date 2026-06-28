@@ -29,6 +29,7 @@ typedef struct breid_t{
 }breid_t;
 typedef breid_t arrow_t;
 typedef breid_t rect_t;
+typedef breid_t hedge_t;
 typedef struct pos_t{
 	uint16_t eid;
 	int8_t pad0[2];
@@ -69,7 +70,8 @@ typedef struct udata_t{
 	uint64_t nwpns;
 	uint16_t*rings;
 	uint64_t nrings;
-	int8_t pad1[16];
+	double morale;
+	int8_t pad1[8];
 }udata_t;
 typedef struct relpos_t{
 	uint16_t eid,prnt;
@@ -104,13 +106,42 @@ typedef struct txtbox_t{
 typedef struct{
 	float x,y,z;
 }posn_t;
+typedef struct flag_t{
+	uint16_t eid;
+	bool ald;
+	int8_t pad0[5];
+	void(*free)(const struct flag_t*);
+}flag_t;
+typedef struct line_t{
+	uint16_t eid;
+	int8_t pad0[2];
+	float x0;
+	void(*free)(const struct line_t*);
+	float y0,z0,x1,y1,z1,width;
+	int8_t pad1[24];
+}line_t;
 extern double scrnwdth,scrnhght;
-extern arrlst_t poses,dims,texes,clkbls,rclkbls,udatas,relposes,rings,cols,arrows,rects,txtboxes;
 extern uint16_t neweid;
 extern bool running;
+extern uint8_t reqcptr;
+extern arrlst_t poses;
+extern arrlst_t dims;
+extern arrlst_t texes;
+extern arrlst_t clkbls;
+extern arrlst_t rclkbls;
+extern arrlst_t udatas;
+extern arrlst_t relposes;
+extern arrlst_t rings;
+extern arrlst_t cols;
+extern arrlst_t arrows;
+extern arrlst_t rects;
+extern arrlst_t txtboxes;
+extern arrlst_t flags;
+extern arrlst_t lines;
+extern arrlst_t hedges;
 posn_t getposn(uint16_t,int8_t*__restrict);
 void delent(uint16_t);
 void*getent(const arrlst_t*,uint16_t);
 uint64_t getenti(const arrlst_t*,uint16_t);
-void termscene();
+void termscene(void);
 #endif

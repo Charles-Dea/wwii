@@ -14,6 +14,7 @@ uint8_t win_inmode=INMODE_NORM;
 uint16_t win_seltxtbox;
 static void mousin(GLFWwindow*__restrict,int32_t,int32_t,int32_t);
 static void keyin(GLFWwindow*__restrict,int32_t,int32_t,int32_t,int32_t);
+static void scrollin(GLFWwindow*__restrict,double,double);
 static void hndlerr(int32_t,const char*__restrict);
 static void addchr(txtbox_t*,uint16_t,uint32_t,uint64_t,uint64_t);
 static int8_t exitmode(uint16_t);
@@ -30,7 +31,8 @@ GLFWwindow*win_open(int8_t*__restrict err){
 	const int32_t h=mode->height;
 	scrnwdth=w;
 	scrnhght=h;
-	GLFWwindow*const __restrict win=glfwCreateWindow(mode->width,mode->height,"WWII",mon,NULL);
+	GLFWwindow*const __restrict win
+		=glfwCreateWindow(mode->width,mode->height,"WWII",mon,NULL);
 	if(!win){
 		*err=E_CREAT_WIN_FAIL;
 		return NULL;
@@ -38,20 +40,31 @@ GLFWwindow*win_open(int8_t*__restrict err){
 	glfwMakeContextCurrent(win);
 	glfwSetMouseButtonCallback(win,mousin);
 	glfwSetKeyCallback(win,keyin);
+	glfwSetScrollCallback(win,scrollin);
 	return win;
+}
+p2d_t win_glfw2ndc(p2d_t pos){
+	const double sh=scrnhght;
+	const double hfsh=sh/2;
+	const double zoom=grphcs_zoom;
+	pos.x=(pos.x/hfsh-scrnwdth/sh)/zoom+grphcs_camx;
+	pos.y=-(pos.y/hfsh-1)/zoom+grphcs_camy;
+	return pos;
 }
 void win_close(GLFWwindow*const __restrict win){
 	glfwDestroyWindow(win);
 	glfwTerminate();
 }
-static void mousin(GLFWwindow*const __restrict win,const int32_t btn,const int32_t act,const int32_t mods){
+static void mousin(
+		GLFWwindow*const __restrict win,
+		const int32_t btn,
+		const int32_t act,
+		const int32_t mods
+		){
 	if(act==GLFW_RELEASE){
-		double mx,my;
-		glfwGetCursorPos(win,&mx,&my);
-		const double sh=scrnhght;
-		const double hfsh=sh/2;
-		mx=mx/hfsh-scrnwdth/sh;
-		my=-(my/hfsh-1);
+		p2d_t mp;
+		glfwGetCursorPos(win,&mp.x,&mp.y);
+		mp=win_glfw2ndc(mp);
 		if(btn==GLFW_MOUSE_BUTTON_LEFT){
 			if(win_inmode==INMODE_NORM){
 				const clkbl_t*i=clkbls.buf;
@@ -73,10 +86,15 @@ static void mousin(GLFWwindow*const __restrict win,const int32_t btn,const int32
 					const double y=p.y;
 					const double hw=(double)d->w/2;
 					const double hh=(double)d->h/2;
-					if(mx>=x-hw&&mx<=x+hw&&my>=y-hh&&my<=y+hh){
+					if(mp.x>=x-hw&&mp.x<=x+hw&&mp.y>=y-hh&&mp.y<=y+hh){
 						const int8_t err=i->func(i->param);
 						if(err){
-							fprintf(stderr,"WARNING: func failed for clickable entity %hu with error code %hhd\n",eid,err);
+							fprintf(
+								stderr,
+								"WARNING: func failed for clickable entity %hu with error code %hhd\n",
+								eid,
+								err
+							);
 						}else{
 							return;
 						}
@@ -84,7 +102,7 @@ static void mousin(GLFWwindow*const __restrict win,const int32_t btn,const int32
 				}
 			}
 			if(win_clkoff){
-				const int8_t err=win_clkoff(win_clkoffparam,mx,my);
+				const int8_t err=win_clkoff(win_clkoffparam,mp.x,mp.y);
 				if(err){
 					fprintf(stderr,"ERROR: win_clkoff failed with error code %hhd\n",err);
 				}
@@ -109,7 +127,7 @@ static void mousin(GLFWwindow*const __restrict win,const int32_t btn,const int32
 				const double y=p.y;
 				const double hw=(double)d->w/2;
 				const double hh=(double)d->h/2;
-				if(mx>=x-hw&&mx<=x+hw&&my>=y-hh&&my<=y+hh){
+				if(mp.x>=x-hw&&mp.x<=x+hw&&mp.y>=y-hh&&mp.y<=y+hh){
 					const int8_t err=i->func(i->param);
 					if(err){
 						fprintf(stderr,"WARNING: func failed for clickable entity %hu with error code %hhd\n",eid,err);
@@ -120,7 +138,7 @@ static void mousin(GLFWwindow*const __restrict win,const int32_t btn,const int32
 			}
 			int8_t(*const rclk)(int64_t,float,float)=win_rclk;
 			if(rclk){
-				const int8_t err=rclk(win_rclkparam,mx,my);
+				const int8_t err=rclk(win_rclkparam,mp.x,mp.y);
 				if(err){
 					fprintf(stderr,"ERROR: win_rclk failed with error code %hhd\n",err);
 				}
@@ -279,24 +297,47 @@ static void keyin(GLFWwindow*const __restrict win,const int32_t key,const int32_
 					}
 					return;
 				case GLFW_KEY_ENTER:
-					unit_rstactd();
+					unit_nxtrn(unit_allied);
 					unit_pltrn=0;
 					net_endtrn();
 					return;
 				case GLFW_KEY_ESCAPE:
-					if(menu_scene==SCENE_MAINMEN){
-						running=0;
-					}else{
-						net_dscnct();
-						menu_main();
+					switch(menu_scene){
+						case SCENE_MAINMEN:
+							running=0;
+							break;
+						case SCENE_GAME:
+							const bool wnrald=!unit_allied;
+							menu_endscrn(wnrald);
+							net_dscnct(wnrald);
+							break;
+						default:
+							menu_main();
+							net_dscnct(0);
 					}
 					return;
 			}
 		}
 	}
 }
+static void scrollin(GLFWwindow*const __restrict win,const double xo,const double yo){
+	if(menu_scene==SCENE_GAME){
+		double zoom=grphcs_zoom;
+		zoom=zoom+yo*zoom*.1;
+		if(zoom>0){
+			grphcs_zoom=zoom;
+		}else{
+			grphcs_zoom=0;
+		}
+	}
+}
 static void hndlerr(const int32_t code,const char*const __restrict descript){
-	fprintf(stderr,"ERROR: a glfw function has generated an error with code %d and description %s\n",code,descript);
+	fprintf(
+		stderr,
+		"ERROR: a glfw function has generated an error with code %d and description %s\n",
+		code,
+		descript
+	);
 }
 static void addchr(txtbox_t*const tb,const uint16_t eid,const uint32_t c,const uint64_t t,const uint64_t cp){
 	if(tb->acs[c]){

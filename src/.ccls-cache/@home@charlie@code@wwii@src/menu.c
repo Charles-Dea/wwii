@@ -1,8 +1,12 @@
+#ifdef _WIN32
+#include<windows.h>
+#endif
 #include<GL/gl.h>
 #include<malloc.h>
+#include<stdio.h>
 #include<string.h>
 #include"grphcs.h"
-#include"main.h"
+#include"flag.h"
 #include"net.h"
 #include"unit.h"
 #include"win.h"
@@ -15,6 +19,8 @@ static int8_t seltxtbox(uint16_t);
 static int8_t desltxtbox(uint16_t);
 static void mkbutton(float,float,float,float,float,uint64_t,int8_t(*)(int64_t),int64_t);
 static int8_t waiting(bool);
+static void mkhedge(float,float,float,float,float);
+static void mksprt(float,float,float,float,uint64_t);
 void menu_main(){
 	termscene();
 	mkbutton(0,.5,0,2,.5,TEX_HOST,(int8_t(*)(int64_t))chsd,0);
@@ -24,12 +30,54 @@ void menu_main(){
 }
 void menu_strtgm(){
 	termscene();
-	mkunit(-.5,.5,0);
-	mkunit(.5,.5,0);
-	mkunit(-.5,-.5,1);
-	mkunit(.5,-.5,1);
+	for(int8_t ald=0;ald<2;ald++){
+		const float neg=(ald<<1)-1;
+		for(float y=2.5;y<=3;y+=.5){
+			const float ay=y*neg;
+			for(float x=-1.75;x<=1.75;x+=.5){
+				mkunit(x,ay,ald);
+			}
+		}
+	}
+	mkhedge(-2.3,-2,.5,-1.84,.05);
+	mkhedge(.4,-1.75,3,-1.8,.06);
+	mkhedge(-4,-4,-3,-1,.08);
+	mkhedge(3.2,-1.74,4,-4,.04);
+	mkhedge(-3,-3.5,3,-3.5,.05);
+	mkhedge(-2.5,-1.5,2.4,-1.4,.07);
+	mkhedge(-4.33,-1,-.32,-0.8,.054);
+	mkhedge(0,-.6,5,-1.2,.065);
+	mkhedge(-2,0,2,0,.05);
+	mkhedge(-5,1,-3,.5,.05);
+	mkhedge(-4,1.5,2,2,.09);
+	mkhedge(-3,1,2,1,.05);
+	mkhedge(0,.5,5,.5,.07);
+	mkhedge(0,1.5,5,1.7,.065);
+	mkflag(0,2.75,1.5,1);
+	mkflag(0,-2.75,1.5,0);
 	glClearColor(0,.5,0,1);
+	reqcptr=2;
 	menu_scene=SCENE_GAME;
+	grphcs_camy=(double)((unit_allied<<1)-1)*2.5;
+}
+void menu_endscrn(const bool ald){
+	termscene();
+	uint64_t adjtex,ftex;
+	float fw;
+	if(ald){
+		adjtex=TEX_AMRCN;
+		ftex=TEX_USFLAG;
+		fw=2.0/3*1.9;
+	}else{
+		adjtex=TEX_GRMN;
+		ftex=TEX_GERMFLAG;
+		fw=2.0/3*5/3;
+	}
+	mksprt(0,2.0/3,2.0/3*4,2.0/3,adjtex);
+	mksprt(0,0,fw,2.0/3,ftex);
+	mksprt(0,-2.0/3,2.0/3*4,2.0/3,TEX_VCTRY);
+	glClearColor(0,0,0,1);
+	menu_scene=SCENE_ENDSCRN;
 }
 static int8_t chsd(){
 	termscene();
@@ -164,8 +212,16 @@ static int8_t desltxtbox(const uint16_t eid){
 	}
 	return E_SUCC;
 }
-static void
-mkbutton(const float x,const float y,const float z,const float w,const float h,const uint64_t t,int8_t(*const func)(int64_t),const int64_t param){
+static void mkbutton(
+		const float x,
+		const float y,
+		const float z,
+		const float w,
+		const float h,
+		const uint64_t t,
+		int8_t(*const func)(int64_t),
+		const int64_t param
+		){
 	const uint16_t eid=neweid;
 	const pos_t pos={
 		.eid=eid,
@@ -201,8 +257,10 @@ static int8_t waiting(const bool allied){
 		return err;
 	}
 	unit_allied=allied;
+	reqcptr=allied?1:2;
 	termscene();
-	const pos_t pos={
+	mksprt(0,0,2,.5,TEX_WTNG);
+	/*const pos_t pos={
 		.eid=1,
 	};
 	arrlst_add(&poses,&pos);
@@ -216,8 +274,56 @@ static int8_t waiting(const bool allied){
 		.eid=1,
 		.tex=TEX_WTNG,
 	};
-	arrlst_add(&texes,&tex);
+	arrlst_add(&texes,&tex);*/
 	menu_scene=SCENE_WTNG;
 	unit_pltrn=1;
 	return E_SUCC;
+}
+static void
+mkhedge(const float x0,const float y0,const float x1,const float y1,const float w){
+	const uint16_t eid=neweid;
+	const hedge_t hedge={
+		.eid=eid,
+	};
+	arrlst_add(&hedges,&hedge);
+	const line_t line={
+		.eid=eid,
+		.x0=x0,
+		.y0=y0,
+		.z0=1,
+		.x1=x1,
+		.y1=y1,
+		.z1=1,
+		.width=w,
+	};
+	arrlst_add(&lines,&line);
+	const col_t col={
+		.eid=eid,
+		.g=.3,
+		.a=1,
+	};
+	arrlst_add(&cols,&col);
+	neweid=eid+1;
+}
+static void
+mksprt(const float x,const float y,const float w,const float h,const uint64_t t){
+	const uint16_t eid=neweid;
+	const pos_t pos={
+		.eid=eid,
+		.x=x,
+		.y=y,
+	};
+	arrlst_add(&poses,&pos);
+	const dim_t dim={
+		.eid=eid,
+		.w=w,
+		.h=h,
+	};
+	arrlst_add(&dims,&dim);
+	const tex_t tex={
+		.eid=eid,
+		.tex=t,
+	};
+	arrlst_add(&texes,&tex);
+	neweid=eid+1;
 }
