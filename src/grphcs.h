@@ -1,7 +1,7 @@
 #ifndef GRPHCS_H
 #define GRPHCS_H
 #include"win.h"
-#define GRPHCS_CAMSPD .05
+#define GRPHCS_CAMSPD .1
 enum{
 	TEX_NULL,
 	TEX_ALLIEDINF,

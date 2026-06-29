@@ -1,5 +1,11 @@
+#ifdef __linux__
+#include<sys/time.h>
+#else
+#include<windows.h>
+#endif
 #include<malloc.h>
 #include<stdbool.h>
+#include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
@@ -91,6 +97,10 @@ static arrlst_t*const comps[]={
 	&lines,
 	&hedges,
 };
+static int64_t utime(void);
+#ifndef __linux__
+static void usleep(int64_t);
+#endif
 int main(){
 	srand(time(NULL));
 	srand(rand());
@@ -107,6 +117,7 @@ int main(){
 	menu_main();
 	net_init();
 	while(running&&!glfwWindowShouldClose(win)){
+		const int64_t et=utime()+100000/12;
 		glfwPollEvents();
 		net_lstn();
 		grphcs_mvcam(win);
@@ -119,6 +130,10 @@ int main(){
 			}
 		}
 		grphcs_draw(win);
+		const int64_t st=et-utime();
+		if(st>0){
+			usleep(st);
+		}
 	}
 	termscene();
 	grphcs_term();
@@ -229,3 +244,19 @@ uint64_t getenti(const arrlst_t*const arr,const uint16_t eid){
 	}
 	return UINT64_MAX;
 }
+#ifdef __linux__
+#else
+static int64_t utime(){
+	FILETIME ft;
+	GetSystemTimeAsFileTime(&ft);
+	return(((uint64_t)ft.dwHighDateTime<<32)|ft.dwLowDateTime)/10;
+}
+static void usleep(const int64_t u){
+	HANDLE ht=CreateWaitableTimer(NULL,1,NULL);
+	LARGE_INTEGER li;
+	li.QuadPart=-(u*10);
+	SetWaitableTimer(ht,&li,0,NULL,NULL,0);
+	WaitForSingleObject(ht,INFINITE);
+	CloseHandle(ht);
+}
+#endif

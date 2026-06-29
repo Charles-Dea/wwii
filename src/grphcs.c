@@ -1,4 +1,4 @@
-#ifdef _WIN32
+#ifndef __linux__
 #include<windows.h>
 #endif
 #include<GL/glew.h>
