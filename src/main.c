@@ -1,5 +1,6 @@
 #ifdef __linux__
 #include<sys/time.h>
+#include<unistd.h>
 #else
 #include<windows.h>
 #endif
@@ -80,6 +81,10 @@ arrlst_t hedges={
 	.bs=SBS*sizeof(hedge_t),
 	.es=sizeof(hedge_t),
 };
+arrlst_t scrnposes={
+	.bs=SBS*sizeof(scrnpos_t),
+	.es=sizeof(scrnpos_t),
+};
 static arrlst_t*const comps[]={
 	&poses,
 	&dims,
@@ -96,8 +101,9 @@ static arrlst_t*const comps[]={
 	&flags,
 	&lines,
 	&hedges,
+	&scrnposes,
 };
-static int64_t utime(void);
+static int64_t getutime(void);
 #ifndef __linux__
 static void usleep(int64_t);
 #endif
@@ -117,7 +123,7 @@ int main(){
 	menu_main();
 	net_init();
 	while(running&&!glfwWindowShouldClose(win)){
-		const int64_t et=utime()+100000/12;
+		const int64_t et=getutime()+100000/12;
 		glfwPollEvents();
 		net_lstn();
 		grphcs_mvcam(win);
@@ -130,7 +136,7 @@ int main(){
 			}
 		}
 		grphcs_draw(win);
-		const int64_t st=et-utime();
+		const int64_t st=et-getutime();
 		if(st>0){
 			usleep(st);
 		}
@@ -189,6 +195,7 @@ void termscene(){
 	grphcs_camx=0;
 	grphcs_camy=0;
 	grphcs_zoom=1;
+	menu_nxtrn=0;
 }
 void delent(const uint16_t eid){
 	arrlst_t*const*i=comps;
@@ -245,8 +252,13 @@ uint64_t getenti(const arrlst_t*const arr,const uint16_t eid){
 	return UINT64_MAX;
 }
 #ifdef __linux__
+static int64_t getutime(){
+	struct timeval tv;
+	gettimeofday(&tv,NULL);
+	return tv.tv_sec*1000000+tv.tv_usec;
+}
 #else
-static int64_t utime(){
+static int64_t getutime(){
 	FILETIME ft;
 	GetSystemTimeAsFileTime(&ft);
 	return(((uint64_t)ft.dwHighDateTime<<32)|ft.dwLowDateTime)/10;
