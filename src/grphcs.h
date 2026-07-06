@@ -1,7 +1,7 @@
 #ifndef GRPHCS_H
 #define GRPHCS_H
-#include"win.h"
-#define GRPHCS_CAMSPD .1
+#include<GLFW/glfw3.h>
+#define GRPHCS_CAMSPD .00001
 enum{
 	TEX_NULL,
 	TEX_ALLIEDINF,
@@ -36,7 +36,7 @@ enum{
 };
 extern double grphcs_camx,grphcs_camy,grphcs_zoom;
 void grphcs_init(void);
-void grphcs_mvcam(GLFWwindow*__restrict);
+void grphcs_mvcam(GLFWwindow*__restrict,uint64_t);
 void grphcs_draw(GLFWwindow*__restrict);
 void grphcs_term(void);
 #endif

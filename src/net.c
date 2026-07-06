@@ -117,6 +117,7 @@ void net_lstn(){
 					break;
 				case PT_DSTR:
 					delent(((dstr_t*)data)->eid);
+					unit_chklos();
 					break;
 				case PT_DMG:
 					udata_t*const u=getent(&udatas,*((uint16_t*)(data+2)));

@@ -9,6 +9,7 @@
 #include<stb_image.h>
 #include"main.h"
 #include"menu.h"
+#include"win.h"
 #include"grphcs.h"
 double grphcs_camx,grphcs_camy;
 double grphcs_zoom=1;
@@ -202,45 +203,46 @@ void grphcs_init(){
 	uivao=va;
 	uiebo=mkbuf(GL_ELEMENT_ARRAY_BUFFER);
 }
-void grphcs_mvcam(GLFWwindow*const __restrict win){
+void grphcs_mvcam(GLFWwindow*const __restrict win,const uint64_t frmtm){
 	if(menu_scene!=SCENE_GAME||win_frftbtn){
 		return;
 	}
 	double mx,my;
 	glfwGetCursorPos(win,&mx,&my);
+	const double cd=GRPHCS_CAMSPD*(double)frmtm/grphcs_zoom;
 	if(mx<5){
-		grphcs_camx-=GRPHCS_CAMSPD/grphcs_zoom;
+		grphcs_camx-=cd;
 	}else if(mx>scrnwdth-5){
-		grphcs_camx+=GRPHCS_CAMSPD/grphcs_zoom;
+		grphcs_camx+=cd;
 	}
 	if(my<5){
-		grphcs_camy+=GRPHCS_CAMSPD/grphcs_zoom;
+		grphcs_camy+=cd;
 	}else if(my>scrnhght-5){
-		grphcs_camy-=GRPHCS_CAMSPD/grphcs_zoom;
+		grphcs_camy-=cd;
 	}
 	if(glfwGetKey(win,GLFW_KEY_LEFT)!=GLFW_RELEASE){
-		grphcs_camx-=GRPHCS_CAMSPD/grphcs_zoom;
+		grphcs_camx-=cd;
 	}
 	if(glfwGetKey(win,GLFW_KEY_RIGHT)!=GLFW_RELEASE){
-		grphcs_camx+=GRPHCS_CAMSPD/grphcs_zoom;
+		grphcs_camx+=cd;
 	}
 	if(glfwGetKey(win,GLFW_KEY_UP)!=GLFW_RELEASE){
-		grphcs_camy+=GRPHCS_CAMSPD/grphcs_zoom;
+		grphcs_camy+=cd;
 	}
 	if(glfwGetKey(win,GLFW_KEY_DOWN)!=GLFW_RELEASE){
-		grphcs_camy-=GRPHCS_CAMSPD/grphcs_zoom;
+		grphcs_camy-=cd;
 	}
 	if(glfwGetKey(win,'A')!=GLFW_RELEASE){
-		grphcs_camx-=GRPHCS_CAMSPD/grphcs_zoom;
+		grphcs_camx-=cd;
 	}
 	if(glfwGetKey(win,'D')!=GLFW_RELEASE){
-		grphcs_camx+=GRPHCS_CAMSPD/grphcs_zoom;
+		grphcs_camx+=cd;
 	}
 	if(glfwGetKey(win,'W')!=GLFW_RELEASE){
-		grphcs_camy+=GRPHCS_CAMSPD/grphcs_zoom;
+		grphcs_camy+=cd;
 	}
 	if(glfwGetKey(win,'S')!=GLFW_RELEASE){
-		grphcs_camy-=GRPHCS_CAMSPD/grphcs_zoom;
+		grphcs_camy-=cd;
 	}
 }
 void grphcs_draw(GLFWwindow*const __restrict win){
