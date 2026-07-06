@@ -1,10 +1,6 @@
 #ifndef WIN_H
 #define WIN_H
-#ifndef WLND
-#define GLFW_USE_WAYLAND OFF
-#endif
 #include<GLFW/glfw3.h>
-#include<stdint.h>
 enum{
 	INMODE_NORM,
 	INMODE_MOVE,

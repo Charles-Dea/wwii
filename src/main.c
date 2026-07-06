@@ -103,10 +103,7 @@ static arrlst_t*const comps[]={
 	&hedges,
 	&scrnposes,
 };
-static int64_t getutime(void);
-#ifndef __linux__
-static void usleep(int64_t);
-#endif
+static uint64_t getutime(void);
 int main(){
 	srand(time(NULL));
 	srand(rand());
@@ -122,11 +119,12 @@ int main(){
 	}
 	menu_main();
 	net_init();
+	uint64_t frmtm;
 	while(running&&!glfwWindowShouldClose(win)){
-		const int64_t et=getutime()+100000/12;
+		const int64_t st=getutime();
 		glfwPollEvents();
 		net_lstn();
-		grphcs_mvcam(win);
+		grphcs_mvcam(win,frmtm);
 		if(menu_scene==SCENE_GAME){
 			flag_update();
 			if(flag_cptrd()>=reqcptr){
@@ -136,10 +134,7 @@ int main(){
 			}
 		}
 		grphcs_draw(win);
-		const int64_t st=et-getutime();
-		if(st>0){
-			usleep(st);
-		}
+		frmtm=getutime()-st;
 	}
 	termscene();
 	grphcs_term();
@@ -252,23 +247,15 @@ uint64_t getenti(const arrlst_t*const arr,const uint16_t eid){
 	return UINT64_MAX;
 }
 #ifdef __linux__
-static int64_t getutime(){
+static uint64_t getutime(){
 	struct timeval tv;
 	gettimeofday(&tv,NULL);
 	return tv.tv_sec*1000000+tv.tv_usec;
 }
 #else
-static int64_t getutime(){
+static uint64_t getutime(){
 	FILETIME ft;
 	GetSystemTimeAsFileTime(&ft);
 	return(((uint64_t)ft.dwHighDateTime<<32)|ft.dwLowDateTime)/10;
-}
-static void usleep(const int64_t u){
-	HANDLE ht=CreateWaitableTimer(NULL,1,NULL);
-	LARGE_INTEGER li;
-	li.QuadPart=-(u*10);
-	SetWaitableTimer(ht,&li,0,NULL,NULL,0);
-	WaitForSingleObject(ht,INFINITE);
-	CloseHandle(ht);
 }
 #endif

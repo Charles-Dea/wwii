@@ -7,7 +7,7 @@
 #include"net.h"
 #include"win.h"
 #include"unit.h"
-#define INFMVSPD .3
+#define INFMVSPD .6
 #define INFICNSZ .1
 uint16_t unit_sel;
 bool unit_allied;
@@ -96,12 +96,12 @@ void mkunit(const float x,const float y,const bool allied){
 		};
 		arrlst_add(&rings,&r0r);
 		wpns=malloc(nwpns*sizeof(wpn_t));
-		wpns[0].acc=.005;
+		wpns[0].acc=.05;
 		wpns[0].rng=3;
 		wpns[0].rpm=150;
 		wpns[0].num=1;
 		const uint16_t w1=mkwpn(wpns,rngs+1,r0+1,eid,INFICNSZ/4);
-		wpns[1].acc=.01;
+		wpns[1].acc=.1;
 		wpns[1].rng=1;
 		wpns[1].rpm=30;
 		wpns[1].num=11;
@@ -129,17 +129,17 @@ void mkunit(const float x,const float y,const bool allied){
 		};
 		arrlst_add(&rings,&r0r);
 		wpns=malloc(3*sizeof(wpn_t));
-		wpns[0].acc=.003;
+		wpns[0].acc=.03;
 		wpns[0].rng=4;
 		wpns[0].rpm=225;
 		wpns[0].num=1;
 		const uint16_t w1=mkwpn(wpns,rngs+1,r0+1,eid,INFICNSZ/3);
-		wpns[1].acc=.0002;
+		wpns[1].acc=.002;
 		wpns[1].rng=.4;
 		wpns[1].rpm=100;
 		wpns[1].num=2;
 		const uint16_t w2=mkwpn(wpns+1,rngs+2,w1,eid,0);
-		wpns[2].acc=.015;
+		wpns[2].acc=.15;
 		wpns[2].rng=1;
 		wpns[2].rpm=18;
 		wpns[2].num=7;
