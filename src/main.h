@@ -2,6 +2,8 @@
 #define MAIN_H
 #include<stdbool.h>
 #include"structs.h"
+#define LOWSTPRNTBL 0x21
+#define HGHSTPRNTBL 0x7e
 enum{
 	E_SUCC=0,
 	E_GLFW_INIT_FAIL=-1,
@@ -26,12 +28,11 @@ enum{
 	YANCR_BOT,
 };
 typedef struct{
-	double acc;
-	float rng;
-	uint16_t rpm,sprt1,sprt0;
-	uint8_t num;
-	int8_t pad[7];
-}wpn_t;
+	uint64_t role;
+	uint64_t*wpns;
+	uint64_t nwpns;
+	int8_t pad[8];
+}sldr_t;
 typedef struct breid_t{
 	uint16_t eid;
 	int8_t pad[6];
@@ -72,22 +73,24 @@ typedef struct clkbl_t{
 }clkbl_t;
 typedef clkbl_t rclkbl_t;
 typedef struct udata_t{
-	uint16_t eid,arr;
-	int8_t flags;
-	int8_t pad0[3];
+	uint16_t eid,arr,sprt1,sprt0;
 	void(*free)(const struct udata_t*);
-	wpn_t*wpns;
-	uint64_t nwpns;
-	uint16_t*rings;
-	uint64_t nrings;
+	arrlst_t sldrs;
 	double morale;
-	int8_t pad1[8];
+	uint16_t*rngs;
+	uint64_t nrngs;
+	uint16_t*chars;
+	uint64_t nchars;
+	uint16_t mvr;
+	int8_t flags;
+	int8_t pad[37];
 }udata_t;
 typedef struct relpos_t{
 	uint16_t eid,prnt;
 	float x;
 	void(*free)(const struct relpos_t*);
 	float y,z;
+	int8_t pad[8];
 }relpos_t;
 typedef struct ring_t{
 	uint16_t eid;

@@ -82,7 +82,33 @@ void menu_strtgm(){
 		.param=unit_allied,
 	};
 	arrlst_add(&clkbls,&clkbl);
-	neweid=nxtrn+1;
+	const uint16_t panl=nxtrn+1;
+	const scrnpos_t ppos={
+		.eid=panl,
+		.z=1,
+		.xancr=XANCR_LEFT,
+		.yancr=YANCR_BOT,
+	};
+	arrlst_add(&scrnposes,&ppos);
+	const dim_t pdim={
+		.eid=panl,
+	};
+	arrlst_add(&dims,&pdim);
+	const col_t pcol={
+		.eid=panl,
+		.r=.5,
+		.g=.25,
+	};
+	arrlst_add(&cols,&pcol);
+	const rect_t prect={
+		.eid=panl,
+	};
+	arrlst_add(&rects,&prect);
+	unit_chrs.buf=malloc(16);
+	unit_chrs.nels=0;
+	unit_chrs.bs=16;
+	unit_panel=panl;
+	neweid=panl+1;
 	menu_nxtrn=nxtrn;
 	glClearColor(0,.5,0,1);
 	reqcptr=2;
@@ -162,8 +188,12 @@ static int8_t enterip(){
 		.ml=15,
 	};
 	memset(txtbox.acs,0,128);
-	const bool*const end=txtbox.acs+'9'+1;
+	const bool*end=txtbox.acs+'9'+1;
 	for(bool*i=txtbox.acs+'0';i<=end;i++){
+		*i=1;
+	}
+	end=txtbox.acs+'Z';
+	for(bool*i=txtbox.acs+'A';i<=end;i++){
 		*i=1;
 	}
 	txtbox.acs['.']=1;
