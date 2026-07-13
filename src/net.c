@@ -83,7 +83,7 @@ int8_t net_join(arrlst_t*const __restrict str){
 void net_lstn(){
 	uint8_t st=status;
 	ENetEvent event;
-	while(st!=STATUS_DSCNCT&&enet_host_service(host,&event,1)>0){
+	while(st!=STATUS_DSCNCT&&enet_host_service(host,&event,2)>0){
 		typedef struct{
 			uint8_t type;
 			bool allied;
@@ -123,33 +123,57 @@ void net_lstn(){
 					udata_t*const u=getent(&udatas,*((uint16_t*)(data+2)));
 					if(u){
 						unit_chmrl(u,*((double*)(data+8)));
-						wpn_t*wi=u->wpns;
-						uint16_t*const rngs=u->rings+1;
-						uint64_t ri=0;
-						for(const uint8_t*i=data+16,*const __restrict end=i+u->nwpns;i<end;i++,wi++){
-							const uint8_t n=*i;
-							if(!n&&wi->num){
-								uint16_t*const rng=rngs+ri;
-								delent(*rng);
-								*rng=0;
-							}
-							wi->num=n;
-							const uint16_t sprt1=wi->sprt1;
-							if(sprt1){
-								tex_t*const t=getent(&texes,sprt1);
-								if(t){
-									t->tex=n/10+TEX_0;
-								}else{
-									fprintf(stderr,"WARNING: entity %hu has no texture\n",sprt1);
+						arrlst_t*const sldrs=&u->sldrs;
+						sldr_t*const sb=sldrs->buf;
+						for(
+								const uint64_t*si=(uint64_t*)(data+24),
+								*const __restrict end=si+*((uint64_t*)(data+16));
+								si<end;si++){
+							const uint64_t s=*si;
+							const sldr_t*sldr=sb+s;
+							const uint64_t nsldrs=sldrs->nels;
+							for(
+									const uint64_t*wi=sldr->wpns,*const __restrict end=wi+sldr->nwpns;
+									wi<end;
+									wi++){
+								const uint64_t w=*wi;
+								if(unit_wpns[w].type==WT_MG){
+									sldr_t*best=NULL;
+									for(sldr_t*sj=sb,*const __restrict end=sb+nsldrs;sj<end;sj++){
+										if(sj->role==SR_ASTMGNR){
+											best=sj;
+											break;
+										}
+										if(!best){
+											best=sj;
+										}
+									}
+									const uint64_t nwpns=best->nwpns;
+									const uint64_t newnwpns=nwpns+1;
+									uint64_t*const newpns=malloc(newnwpns<<3);
+									const uint64_t*const wpns=best->wpns;
+									memcpy(newpns,wpns,nwpns<<3);
+									free(wpns);
+									newpns[nwpns]=w;
+									best->wpns=newpns;
+									best->nwpns=newnwpns;
 								}
 							}
-							tex_t*const t=getent(&texes,wi->sprt0);
-							if(t){
-								t->tex=n%10+TEX_0;
-							}else{
-								fprintf(stderr,"WARNING: entity %hu has no texture\n",wi->sprt0);
-							}
-							ri++;
+							free(sldr->wpns);
+							arrlst_del(sldrs,s);
+						}
+						const uint64_t nsldrs=sldrs->nels;
+						tex_t*const tex1=getent(&texes,u->sprt1);
+						if(tex1){
+							tex1->tex=nsldrs/10+TEX_0;
+						}else{
+							fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt1);
+						}
+						tex_t*const tex0=getent(&texes,u->sprt0);
+						if(tex0){
+							tex0->tex=nsldrs%10+TEX_0;
+						}else{
+							fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt0);
 						}
 					}else{
 						fprintf(stderr,"WARNING: entity %hu has no udata\n",*((uint16_t*)(data+2)));
@@ -196,15 +220,18 @@ void net_dstr(const uint16_t eid){
 }
 void net_dmg(
 		const uint16_t eid,
-		const uint8_t*const __restrict nums,
-		const uint64_t nn,
-		const double mrlchng){
-	const uint64_t pktsz=nn+16;
+		const uint64_t*const __restrict kld,
+		const uint64_t nkld,
+		const double mrlchng
+		){
+	const uint64_t kldsz=nkld<<3;
+	const uint64_t pktsz=kldsz+24;
 	int8_t pkt[pktsz];
 	pkt[0]=PT_DMG;
 	*((uint16_t*)(pkt+2))=eid;
 	*((double*)(pkt+8))=mrlchng;
-	memcpy(pkt+16,nums,nn);
+	*((uint64_t*)(pkt+16))=nkld;
+	memcpy(pkt+24,kld,kldsz);
 	sndpkt(pkt,pktsz);
 }
 void net_endtrn(){

@@ -315,6 +315,8 @@ static void keyin(
 				}
 			}else if(key>=GLFW_KEY_0&&key<=GLFW_KEY_9&&t->str.nels<t->ml){
 				addchr(t,stb,key-GLFW_KEY_0+'0',key-GLFW_KEY_0+TEX_0,cp);
+			}else if(key>='A'&&key<='Z'&&t->str.nels<t->ml){
+				addchr(t,stb,key,key-'A'+TEX_a,cp);
 			}else if(key==GLFW_KEY_PERIOD&&t->str.nels<t->ml){
 				addchr(t,stb,'.',TEX_DOT,cp);
 			}else if(key==GLFW_KEY_ENTER){

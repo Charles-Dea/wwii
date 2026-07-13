@@ -19,6 +19,7 @@ static uint32_t arrshad,arrvbo,arrvao;
 static uint32_t rectshad,rectvbo,rectvao,rectebo;
 static uint32_t lnshad,lnvbo,lnvao,lnebo;
 static uint32_t uishad,uivbo,uivao,uiebo;
+static uint32_t uirshad,uirvbo,uirvao,uirebo;
 static int32_t buildshad(const char*__restrict,const char*__restrict);
 static int32_t compshad(uint32_t,uint32_t,const char*__restrict);
 static int8_t loadtex(const char*__restrict);
@@ -74,6 +75,14 @@ void grphcs_init(){
 		glUniform1f(0,sr);
 		uishad=uis;
 	}
+	const int32_t uir=buildshad("shaders/uir.vert.glsl","shaders/uir.frag.glsl");
+	if(uir&0x80000000){
+		fputs("WARNING: failed to build uir shader program\n",stderr);
+	}else{
+		glUseProgram(uir);
+		glUniform1f(0,sr);
+		uirshad=uir;
+	}
 	if(loadtex("res/alliedinf.png")){
 		fputs("WARNING: failed to load texture for Allied infantry\n",stderr);
 	}
@@ -125,15 +134,12 @@ void grphcs_init(){
 	if(loadtex("res/victory.png")){
 		fputs("WARNING: failed to load texture for word \"VICTORY\"\n",stderr);
 	}
-	char path[]="res/0.png";
-	for(char i='0';i<='9';){
+	for(char c=LOWSTPRNTBL;c<=HGHSTPRNTBL;c++){
+		char path[sizeof("res/chars/0x.png")+2];
+		sprintf(path,"res/chars/0x%hhx.png",c);
 		if(loadtex(path)){
-			fprintf(stderr,"WARNING: failed to load texture for digit %c\n",i);
+			fprintf(stderr,"WARNING: failed to load texture for character %c\n",c);
 		}
-		path[4]=++i;
-	}
-	if(loadtex("res/dot.png")){
-		fputs("WARNING: failed to load texture for period character\n",stderr);
 	}
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
@@ -202,6 +208,15 @@ void grphcs_init(){
 	glVertexAttribPointer(1,2,GL_FLOAT,0,(3+2)*4,(void*)(3*4));
 	uivao=va;
 	uiebo=mkbuf(GL_ELEMENT_ARRAY_BUFFER);
+	uirvbo=mkbuf(GL_ARRAY_BUFFER);
+	glGenVertexArrays(1,&va);
+	glBindVertexArray(va);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0,3,GL_FLOAT,0,(3+4)*4,0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1,4,GL_FLOAT,0,(3+4)*4,(void*)(3*4));
+	uirvao=va;
+	uirebo=mkbuf(GL_ELEMENT_ARRAY_BUFFER);
 }
 void grphcs_mvcam(GLFWwindow*const __restrict win,const uint64_t frmtm){
 	if(menu_scene!=SCENE_GAME||win_frftbtn){
@@ -257,12 +272,25 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		.bs=bs,
 		.es=sizeof(rct_t),
 	};
+	typedef struct{
+		float x,y,z,w,h,r,g,b,a;
+		uint8_t xa,ya;
+		int8_t pad[2];
+	}uir_t;
+	arrlst_t uirs={
+		.buf=malloc(bs),
+		.bs=bs,
+		.es=sizeof(uir_t),
+	};
 	for(const rect_t*i=rects.buf,*const __restrict end=i+nsqs;i<end;i++){
 		const uint16_t eid=i->eid;
-		int8_t err;
-		const posn_t posn=getposn(eid,&err);
-		if(err){
-			fprintf(stderr,"WARNING: entity %hu has no position\n",eid);
+		const col_t*const col=getent(&cols,eid);
+		if(!col){
+			fprintf(stderr,"WARNING: entity %hu has no colors\n",eid);
+			continue;
+		}
+		const float a=col->a;
+		if(!a){
 			continue;
 		}
 		const dim_t*const dim=getent(&dims,eid);
@@ -270,23 +298,42 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 			fprintf(stderr,"WARNING: entity %hu has no dimensions\n",eid);
 			continue;
 		}
-		const col_t*const col=getent(&cols,eid);
-		if(!col){
-			fprintf(stderr,"WARNING: entity %hu has no colors\n",eid);
-			continue;
+		int8_t err;
+		const posn_t posn=getposn(eid,&err);
+		if(err){
+			const scrnpos_t*const pos=getent(&scrnposes,eid);
+			if(!pos){
+				fprintf(stderr,"WARNING: entity %hu has no position\n",eid);
+				continue;
+			}
+			const uir_t uir={
+				.x=pos->x,
+				.y=pos->y,
+				.z=pos->z/2,
+				.w=dim->w,
+				.h=dim->h,
+				.r=col->r,
+				.g=col->g,
+				.b=col->b,
+				.a=a,
+				.xa=pos->xancr,
+				.ya=pos->yancr,
+			};
+			arrlst_add(&uirs,&uir);
+		}else{
+			const rct_t rct={
+				.x=posn.x,
+				.y=posn.y,
+				.z=posn.z/2+.5,
+				.w=dim->w,
+				.h=dim->h,
+				.r=col->r,
+				.g=col->g,
+				.b=col->b,
+				.a=a,
+			};
+			arrlst_add(&rcts,&rct);
 		}
-		const rct_t rct={
-			.x=posn.x,
-			.y=posn.y,
-			.z=posn.z/2+.5,
-			.w=dim->w,
-			.h=dim->h,
-			.r=col->r,
-			.g=col->g,
-			.b=col->b,
-			.a=col->a,
-		};
-		arrlst_add(&rcts,&rct);
 	}
 	typedef struct{
 		float x,y,z,r,g,b,a;
@@ -501,148 +548,6 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 	free(lns.buf);
 	free(vbolns);
 	free(ebolns);
-	arrlst_t sprites[TEX_MAX];
-	typedef struct{
-		float x,y,z,w,h;
-		int8_t pad[12];
-	}sprite_t;
-	const arrlst_t*const __restrict send=sprites+TEX_MAX;
-	for(arrlst_t*i=sprites+1;i<send;i++){
-		i->buf=malloc(8*sizeof(sprite_t));
-		i->nels=0;
-		i->bs=8*sizeof(sprite_t);
-		i->es=sizeof(sprite_t);
-	}
-	arrlst_t uiels[TEX_MAX];
-	typedef struct{
-		float x,y,z,w,h;
-		uint8_t xancr,yancr;
-		int8_t pad[10];
-	}uiel_t;
-	const arrlst_t*const __restrict uends=uiels+TEX_MAX;
-	for(arrlst_t*i=uiels+1;i<uends;i++){
-		i->buf=malloc(8*sizeof(uiel_t));
-		i->nels=0;
-		i->bs=8*sizeof(uiel_t);
-		i->es=sizeof(uiel_t);
-	}
-	const tex_t*const txs=texes.buf;
-	const tex_t*const tend=txs+texes.nels;
-	for(const tex_t*i=txs;i<tend;i++){
-		const uint64_t t=i->tex;
-		if(!t){
-			continue;
-		}
-		const uint16_t eid=i->eid;
-		const dim_t*const dim=getent(&dims,eid);
-		if(!dim){
-			fprintf(stderr,"WARNING: entity %hu has no dimensions\n",eid);
-			continue;
-		}
-		int8_t err;
-		const posn_t posn=getposn(eid,&err);
-		if(err){
-			const scrnpos_t*const pos=getent(&scrnposes,eid);
-			if(!pos){
-				fprintf(stderr,"WARNING: entity %hu has no position\n",eid);
-				continue;
-			}
-			const uiel_t uiel={
-				.x=pos->x,
-				.y=pos->y,
-				.z=pos->z/2,
-				.w=dim->w,
-				.h=dim->h,
-				.xancr=pos->xancr,
-				.yancr=pos->yancr,
-			};
-			arrlst_add(uiels+i->tex,&uiel);
-		}else{
-			const sprite_t sprt={
-				.x=posn.x,
-				.y=posn.y,
-				.z=posn.z/2+.5,
-				.w=dim->w,
-				.h=dim->h,
-			};
-			arrlst_add(sprites+t,&sprt);
-		}
-	}
-	glUseProgram(sprtshad);
-	glUniform3f(1,grphcs_camx,grphcs_camy,grphcs_zoom);
-	glBindBuffer(GL_ARRAY_BUFFER,sprvbo);
-	glBindVertexArray(sprvao);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,sprebo);
-	for(uint64_t i=1;i<TEX_MAX;i++){
-		const arrlst_t*const a=sprites+i;
-		const sprite_t*const sprts=a->buf;
-		const uint64_t nels=a->nels;
-		if(!nels){
-			free(sprts);
-			continue;
-		}
-		glBindTexture(GL_TEXTURE_2D,i);
-		typedef struct{
-			float x,y,z,tx,ty;
-		}vert_t;
-		typedef struct{
-			vert_t tl,tr,bl,br;
-		}vbosq_t;
-		const uint64_t vbosqsz=nels*sizeof(vbosq_t);
-		vbosq_t*const vbosqs=malloc(vbosqsz);
-		typedef struct{
-			uint32_t tl,tr1,bl1,tr2,bl2,br;
-		}ebosq_t;
-		const uint64_t ebosqsz=nels*sizeof(ebosq_t);
-		ebosq_t*const ebosqs=malloc(ebosqsz);
-		for(uint64_t j=0;j<nels;j++){
-			const sprite_t*const s=sprts+j;
-			const float x=s->x;
-			const float y=s->y;
-			const float z=s->z;
-			const float hw=s->w/2;
-			const float hh=s->h/2;
-			const float l=x-hw;
-			const float r=x+hw;
-			const float t=y+hh;
-			const float b=y-hh;
-			vbosq_t*const vbosq=vbosqs+j;
-			vbosq->tl.x=l;
-			vbosq->tl.y=t;
-			vbosq->tl.z=z;
-			vbosq->tl.tx=0;
-			vbosq->tl.ty=0;
-			vbosq->tr.x=r;
-			vbosq->tr.y=t;
-			vbosq->tr.z=z;
-			vbosq->tr.tx=1;
-			vbosq->tr.ty=0;
-			vbosq->bl.x=l;
-			vbosq->bl.y=b;
-			vbosq->bl.z=z;
-			vbosq->bl.tx=0;
-			vbosq->bl.ty=1;
-			vbosq->br.x=r;
-			vbosq->br.y=b;
-			vbosq->br.z=z;
-			vbosq->br.tx=1;
-			vbosq->br.ty=1;
-			const uint32_t base=j*4;
-			ebosq_t*const ebosq=ebosqs+j;
-			ebosq->tl=base;
-			ebosq->tr1=base+1;
-			ebosq->bl1=base+2;
-			ebosq->tr2=base+1;
-			ebosq->bl2=base+2;
-			ebosq->br=base+3;
-		}
-		glBufferData(GL_ARRAY_BUFFER,vbosqsz,vbosqs,GL_STATIC_DRAW);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER,ebosqsz,ebosqs,GL_STATIC_DRAW);
-		glDrawElements(GL_TRIANGLES,nels*6,GL_UNSIGNED_INT,0);
-		free(vbosqs);
-		free(ebosqs);
-		free(sprts);
-	}
 	typedef struct{
 		float x,y,z,r,g,b,a,rad;
 	}crcl_t;
@@ -880,6 +785,254 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 	glBindVertexArray(arrvao);
 	glDrawArrays(GL_TRIANGLES,0,arrs.nels*3);
 	free(tris);
+	arrlst_t sprites[TEX_MAX];
+	typedef struct{
+		float x,y,z,w,h;
+		int8_t pad[12];
+	}sprite_t;
+	const arrlst_t*const __restrict send=sprites+TEX_MAX;
+	for(arrlst_t*i=sprites+1;i<send;i++){
+		i->buf=malloc(8*sizeof(sprite_t));
+		i->nels=0;
+		i->bs=8*sizeof(sprite_t);
+		i->es=sizeof(sprite_t);
+	}
+	arrlst_t uiels[TEX_MAX];
+	typedef struct{
+		float x,y,z,w,h;
+		uint8_t xancr,yancr;
+		int8_t pad[10];
+	}uiel_t;
+	const arrlst_t*const __restrict uends=uiels+TEX_MAX;
+	for(arrlst_t*i=uiels+1;i<uends;i++){
+		i->buf=malloc(8*sizeof(uiel_t));
+		i->nels=0;
+		i->bs=8*sizeof(uiel_t);
+		i->es=sizeof(uiel_t);
+	}
+	const tex_t*const txs=texes.buf;
+	const tex_t*const tend=txs+texes.nels;
+	for(const tex_t*i=txs;i<tend;i++){
+		const uint64_t t=i->tex;
+		if(!t){
+			continue;
+		}
+		const uint16_t eid=i->eid;
+		const dim_t*const dim=getent(&dims,eid);
+		if(!dim){
+			fprintf(stderr,"WARNING: entity %hu has no dimensions\n",eid);
+			continue;
+		}
+		int8_t err;
+		const posn_t posn=getposn(eid,&err);
+		if(err){
+			const scrnpos_t*const pos=getent(&scrnposes,eid);
+			if(!pos){
+				fprintf(stderr,"WARNING: entity %hu has no position\n",eid);
+				continue;
+			}
+			const uiel_t uiel={
+				.x=pos->x,
+				.y=pos->y,
+				.z=pos->z/2,
+				.w=dim->w,
+				.h=dim->h,
+				.xancr=pos->xancr,
+				.yancr=pos->yancr,
+			};
+			arrlst_add(uiels+i->tex,&uiel);
+		}else{
+			const sprite_t sprt={
+				.x=posn.x,
+				.y=posn.y,
+				.z=posn.z/2+.5,
+				.w=dim->w,
+				.h=dim->h,
+			};
+			arrlst_add(sprites+t,&sprt);
+		}
+	}
+	glUseProgram(sprtshad);
+	glUniform3f(1,grphcs_camx,grphcs_camy,grphcs_zoom);
+	glBindBuffer(GL_ARRAY_BUFFER,sprvbo);
+	glBindVertexArray(sprvao);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,sprebo);
+	for(uint64_t i=1;i<TEX_MAX;i++){
+		const arrlst_t*const a=sprites+i;
+		const sprite_t*const sprts=a->buf;
+		const uint64_t nels=a->nels;
+		if(!nels){
+			free(sprts);
+			continue;
+		}
+		glBindTexture(GL_TEXTURE_2D,i);
+		typedef struct{
+			float x,y,z,tx,ty;
+		}vert_t;
+		typedef struct{
+			vert_t tl,tr,bl,br;
+		}vbosq_t;
+		const uint64_t vbosqsz=nels*sizeof(vbosq_t);
+		vbosq_t*const vbosqs=malloc(vbosqsz);
+		typedef struct{
+			uint32_t tl,tr1,bl1,tr2,bl2,br;
+		}ebosq_t;
+		const uint64_t ebosqsz=nels*sizeof(ebosq_t);
+		ebosq_t*const ebosqs=malloc(ebosqsz);
+		for(uint64_t j=0;j<nels;j++){
+			const sprite_t*const s=sprts+j;
+			const float x=s->x;
+			const float y=s->y;
+			const float z=s->z;
+			const float hw=s->w/2;
+			const float hh=s->h/2;
+			const float l=x-hw;
+			const float r=x+hw;
+			const float t=y+hh;
+			const float b=y-hh;
+			vbosq_t*const vbosq=vbosqs+j;
+			vbosq->tl.x=l;
+			vbosq->tl.y=t;
+			vbosq->tl.z=z;
+			vbosq->tl.tx=0;
+			vbosq->tl.ty=0;
+			vbosq->tr.x=r;
+			vbosq->tr.y=t;
+			vbosq->tr.z=z;
+			vbosq->tr.tx=1;
+			vbosq->tr.ty=0;
+			vbosq->bl.x=l;
+			vbosq->bl.y=b;
+			vbosq->bl.z=z;
+			vbosq->bl.tx=0;
+			vbosq->bl.ty=1;
+			vbosq->br.x=r;
+			vbosq->br.y=b;
+			vbosq->br.z=z;
+			vbosq->br.tx=1;
+			vbosq->br.ty=1;
+			const uint32_t base=j*4;
+			ebosq_t*const ebosq=ebosqs+j;
+			ebosq->tl=base;
+			ebosq->tr1=base+1;
+			ebosq->bl1=base+2;
+			ebosq->tr2=base+1;
+			ebosq->bl2=base+2;
+			ebosq->br=base+3;
+		}
+		glBufferData(GL_ARRAY_BUFFER,vbosqsz,vbosqs,GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER,ebosqsz,ebosqs,GL_STATIC_DRAW);
+		glDrawElements(GL_TRIANGLES,nels*6,GL_UNSIGNED_INT,0);
+		free(vbosqs);
+		free(ebosqs);
+		free(sprts);
+	}
+	glUseProgram(uirshad);
+	glBindBuffer(GL_ARRAY_BUFFER,uirvbo);
+	glBindVertexArray(uirvao);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,uirebo);
+	typedef struct{
+		float x,y,z,r,g,b,a;
+	}uirvert_t;
+	typedef struct{
+		uirvert_t tl,tr,bl,br;
+	}vbouir_t;
+	const uint64_t vbouirsz=uirs.nels*sizeof(vbouir_t);
+	vbouir_t*const vbouirs=malloc(vbouirsz);
+	typedef struct{
+		uint32_t tl,tr0,bl0,tr1,bl1,br;
+	}ebouir_t;
+	const uint64_t ebouirsz=uirs.nels*sizeof(ebouir_t);
+	ebouir_t*const ebouirs=malloc(ebouirsz);
+	for(uint64_t i=0;i<uirs.nels;i++){
+		const uir_t*const uir=uirs.buf+i*sizeof(uir_t);
+		float x;
+		switch(uir->xa){
+			case XANCR_CENT:
+				x=uir->x;
+				break;
+			case XANCR_LEFT:
+				x=uir->x-scrnwdth/scrnhght;
+				break;
+			case XANCR_RGHT:
+				x=uir->x+scrnwdth/scrnhght;
+				break;
+			default:
+				fprintf(stderr,"WARNING: invalid xancr %hhu\n",uir->xa);
+				continue;
+		}
+		float y;
+		switch(uir->ya){
+			case YANCR_CENT:
+				y=uir->y;
+				break;
+			case YANCR_TOP:
+				y=uir->y+1;
+				break;
+			case YANCR_BOT:
+				y=uir->y-1;
+				break;
+			default:
+				fprintf(stderr,"WARNING: invalid yancr %hhu\n",uir->ya);
+				continue;
+		}
+		const float z=uir->z;
+		const float hw=uir->w/2;
+		const float hh=uir->h/2;
+		const float r=uir->r;
+		const float g=uir->g;
+		const float b=uir->b;
+		const float a=uir->a;
+		const float left=x-hw;
+		const float rght=x+hw;
+		const float top=y+hh;
+		const float bot=y-hh;
+		vbouir_t*const vu=vbouirs+i;
+		vu->tl.x=left;
+		vu->tl.y=top;
+		vu->tl.z=z;
+		vu->tl.r=r;
+		vu->tl.g=g;
+		vu->tl.b=b;
+		vu->tl.a=a;
+		vu->tr.x=rght;
+		vu->tr.y=top;
+		vu->tr.z=z;
+		vu->tr.r=r;
+		vu->tr.g=g;
+		vu->tr.b=b;
+		vu->tr.a=a;
+		vu->bl.x=left;
+		vu->bl.y=bot;
+		vu->bl.z=z;
+		vu->bl.r=r;
+		vu->bl.g=g;
+		vu->bl.b=b;
+		vu->bl.a=a;
+		vu->br.x=rght;
+		vu->br.y=bot;
+		vu->br.z=z;
+		vu->br.r=r;
+		vu->br.g=g;
+		vu->br.b=b;
+		vu->br.a=a;
+		const uint32_t tl=i*4;
+		const uint32_t tr=tl+1;
+		const uint32_t bl=tr+1;
+		ebouir_t*const eu=ebouirs+i;
+		eu->tl=tl;
+		eu->tr0=tr;
+		eu->bl0=bl;
+		eu->tr1=tr;
+		eu->bl1=bl;
+		eu->br=bl+1;
+	}
+	glBufferData(GL_ARRAY_BUFFER,vbouirsz,vbouirs,GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER,ebouirsz,ebouirs,GL_STATIC_DRAW);
+	glDrawElements(GL_TRIANGLES,uirs.nels*6,GL_UNSIGNED_INT,0);
+	free(vbouirs);
+	free(ebouirs);
+	free(uirs.buf);
 	glUseProgram(uishad);
 	glBindBuffer(GL_ARRAY_BUFFER,uivbo);
 	glBindVertexArray(uivao);
@@ -1004,6 +1157,7 @@ void grphcs_term(){
 		arrvbo,
 		rectvbo,rectebo,
 		lnvbo,lnebo,
+		uivbo,uiebo,
 	};
 	glDeleteBuffers(sizeof(bufs)/4,bufs);
 	glBindVertexArray(sprvao);
@@ -1020,12 +1174,16 @@ void grphcs_term(){
 	glBindVertexArray(rectvao);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(0);
-	uint32_t vaos[]={sprvao,ringvao,arrvao,rectvao,lnvao};
+	glBindVertexArray(uivao);
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(0);
+	uint32_t vaos[]={sprvao,ringvao,arrvao,rectvao,lnvao,uivao};
 	glDeleteVertexArrays(sizeof(vaos)/4,vaos);
 	glDeleteProgram(sprtshad);
 	glDeleteProgram(ringshad);
 	glDeleteProgram(arrshad);
 	glDeleteProgram(rectshad);
+	glDeleteProgram(uishad);
 }
 static int32_t buildshad(const char*const __restrict vs,const char*const __restrict fs){
 	const int32_t prog=glCreateProgram();
@@ -1097,32 +1255,3 @@ static uint32_t mkbuf(const uint32_t type){
 	glBindBuffer(type,buf);
 	return buf;
 }
-/*static posn_t getposn(const uint16_t eid,int8_t*const __restrict err){
-	const pos_t*const pos=getent(&poses,eid);
-	if(pos){
-		const posn_t posn={
-			.x=pos->x,
-			.y=pos->y,
-			.z=pos->z,
-		};
-		*err=E_SUCC;
-		return posn;
-	}
-	const relpos_t*const relpos=getent(&relposes,eid);
-	if(!relpos){
-		*err=E_NO_ENT;
-		posn_t posn={};
-		return posn;
-	}
-	const posn_t prnt=getposn(relpos->prnt,err);
-	if(*err){
-		posn_t posn={};
-		return posn;
-	}
-	const posn_t posn={
-		.x=prnt.x+relpos->x,
-		.y=prnt.y+relpos->y,
-		.z=prnt.z+relpos->z,
-	};
-	return posn;
-}*/
