@@ -36,9 +36,36 @@ void menu_strtgm(){
 		for(float y=2.5;y<=3;y+=.5){
 			const float ay=y*neg;
 			for(float x=-1.75;x<=1.75;x+=.5){
-				mkunit(x,ay,ald);
+				const int8_t err=mkunit(x,ay,ald,UT_INF);
+				if(err){
+					fprintf(stderr,"WARNING: mkunit failed with error code %hhi\n",err);
+				}
 			}
 		}
+	}
+	int8_t err=mkunit(-0.475,3.5,1,UT_MG);
+	if(err){
+		fprintf(stderr,"WARNING: mkunit failed with error code %hhi\n",err);
+	}
+	err=mkunit(0.475,3.5,1,UT_MG);
+	if(err){
+		fprintf(stderr,"WARNING: mkunit failed with error code %hhi\n",err);
+	}
+	err=mkunit(-0.475,-3.5,0,UT_MG);
+	if(err){
+		fprintf(stderr,"WARNING: mkunit failed with error code %hhi\n",err);
+	}
+	err=mkunit(0.475,-3.5,0,UT_MG);
+	if(err){
+		fprintf(stderr,"WARNING: mkunit failed with error code %hhi\n",err);
+	}
+	err=mkunit(0,3.5,1,UT_MRTR);
+	if(err){
+		fprintf(stderr,"WARNING: mkunit failed with error code %hhi\n",err);
+	}
+	err=mkunit(0,-3.5,0,UT_MRTR);
+	if(err){
+		fprintf(stderr,"WARNING: mkunit failed with error code %hhi\n",err);
 	}
 	mkhedge(-2.3,-2,.5,-1.84,.05);
 	mkhedge(.4,-1.75,3,-1.8,.06);
@@ -114,6 +141,7 @@ void menu_strtgm(){
 	reqcptr=2;
 	menu_scene=SCENE_GAME;
 	grphcs_camy=(double)((unit_allied<<1)-1)*2.5;
+	grphcs_zoom=.75;
 	unit_chklos();
 }
 void menu_endscrn(const bool ald){
@@ -236,7 +264,7 @@ static void deltxtbox(const txtbox_t*const tb){
 	for(const uint16_t*i=chrs,*const end=i+tb->chrs.nels;i<end;i++){
 		delent(*i);
 	}
-	free(chrs);
+	free((void*)chrs);
 	free(tb->acs);
 }
 static int8_t seltxtbox(const uint16_t eid){

@@ -85,6 +85,10 @@ arrlst_t scrnposes={
 	.bs=SBS*sizeof(scrnpos_t),
 	.es=sizeof(scrnpos_t),
 };
+arrlst_t crsrposes={
+	.bs=SBS*sizeof(crsrpos_t),
+	.es=sizeof(crsrpos_t),
+};
 static arrlst_t*const comps[]={
 	&poses,
 	&dims,
@@ -102,7 +106,9 @@ static arrlst_t*const comps[]={
 	&lines,
 	&hedges,
 	&scrnposes,
+	&crsrposes,
 };
+static GLFWwindow*window;
 static uint64_t getutime(void);
 int main(){
 	srand(time(NULL));
@@ -112,6 +118,7 @@ int main(){
 	if(!win){
 		return err;
 	}
+	window=win;
 	grphcs_init();
 	for(arrlst_t*const*i=comps,*const*const __restrict end=i+sizeof(comps)/8;i<end;i++){
 		arrlst_t*const a=*i;
@@ -152,25 +159,37 @@ posn_t getposn(const uint16_t eid,int8_t*const __restrict err){
 		return posn;
 	}
 	const relpos_t*const relpos=getent(&relposes,eid);
-	if(!relpos){
-		*err=E_NO_ENT;
-		posn_t posn={};
+	if(relpos){
+		const posn_t prnt=getposn(relpos->prnt,err);
+		if(*err){
+			posn_t posn={};
+			return posn;
+		}
+		const posn_t posn={
+			.x=prnt.x+relpos->x,
+			.y=prnt.y+relpos->y,
+			.z=prnt.z+relpos->z,
+		};
 		return posn;
 	}
-	const posn_t prnt=getposn(relpos->prnt,err);
-	if(*err){
-		posn_t posn={};
+	const crsrpos_t*const cpos=getent(&crsrposes,eid);
+	if(cpos){
+		p2d_t p2d;
+		glfwGetCursorPos(window,&p2d.x,&p2d.y);
+		p2d=win_glfw2ndc(p2d);
+		const posn_t posn={
+			.x=p2d.x,
+			.y=p2d.y,
+			.z=cpos->z,
+		};
 		return posn;
 	}
-	const posn_t posn={
-		.x=prnt.x+relpos->x,
-		.y=prnt.y+relpos->y,
-		.z=prnt.z+relpos->z,
-	};
+	*err=E_NO_ENT;
+	posn_t posn;
 	return posn;
 }
 void termscene(){
-	for(uint16_t i=neweid;i;i--){
+	for(uint16_t i=neweid-1;i;i--){
 		delent(i);
 	}
 	for(arrlst_t*const*i=comps,*const*const __restrict end=comps+sizeof(comps)/8;i<end;i++)
@@ -217,7 +236,7 @@ void*getent(const arrlst_t*const arr,const uint16_t eid){
 		const uint16_t*const ent=ents+mid*es;
 		const int16_t diff=*ent-eid;
 		if(!diff){
-			return ent;
+			return(void*)ent;
 		}
 		if(diff&0x8000){
 			low=mid+1;
@@ -231,7 +250,7 @@ uint64_t getenti(const arrlst_t*const arr,const uint16_t eid){
 	const void*ents=arr->buf;
 	const uint64_t es=arr->es;
 	const uint64_t nels=arr->nels;
-	for(int64_t low=0,high=nels;low<=high&&~low&0x8000000000000000&&high<=nels;){
+	for(int64_t low=0,high=nels-1;low<=high&&~low&0x8000000000000000&&high<=nels;){
 		const uint64_t mid=(low+high)/2;
 		const uint16_t*const ent=ents+mid*es;
 		const int16_t diff=*ent-eid;

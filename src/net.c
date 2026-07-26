@@ -137,26 +137,30 @@ void net_lstn(){
 									wi<end;
 									wi++){
 								const uint64_t w=*wi;
-								if(unit_wpns[w].type==WT_MG){
-									sldr_t*best=NULL;
+								if(unit_wpns[w].base.flags&WFLAGS_CREW){
+									sldr_t*s;
 									for(sldr_t*sj=sb,*const __restrict end=sb+nsldrs;sj<end;sj++){
-										if(sj->role==SR_ASTMGNR){
-											best=sj;
-											break;
-										}
-										if(!best){
-											best=sj;
+										if((sj->role==SR_ASTMGNR||sj->role==SR_ASTGNR)&&sj!=sldr){
+											s=sj;
+											goto givewpn;
 										}
 									}
-									const uint64_t nwpns=best->nwpns;
-									const uint64_t newnwpns=nwpns+1;
-									uint64_t*const newpns=malloc(newnwpns<<3);
-									const uint64_t*const wpns=best->wpns;
-									memcpy(newpns,wpns,nwpns<<3);
-									free(wpns);
-									newpns[nwpns]=w;
-									best->wpns=newpns;
-									best->nwpns=newnwpns;
+									for(;;){
+										s=sb+rand()%nsldrs;
+										if(s!=sldr){
+											break;
+										}
+									}
+									givewpn:
+										const uint64_t*const wpns=s->wpns;
+										const uint64_t nwpns=s->nwpns;
+										const uint64_t newnwpns=nwpns+1;
+										uint64_t*const newpns=malloc(newnwpns<<3);
+										memcpy(newpns,wpns,nwpns<<3);
+										free((void*)wpns);
+										newpns[nwpns]=w;
+										s->wpns=newpns;
+										s->nwpns=newnwpns;
 								}
 							}
 							free(sldr->wpns);
@@ -175,6 +179,8 @@ void net_lstn(){
 						}else{
 							fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt0);
 						}
+						const uint8_t ack=PT_ACK;
+						sndpkt(&ack,1);
 					}else{
 						fprintf(stderr,"WARNING: entity %hu has no udata\n",*((uint16_t*)(data+2)));
 					}
@@ -218,7 +224,7 @@ void net_dstr(const uint16_t eid){
 	};
 	sndpkt(&dstr,sizeof(dstr_t));
 }
-void net_dmg(
+int8_t net_dmg(
 		const uint16_t eid,
 		const uint64_t*const __restrict kld,
 		const uint64_t nkld,
@@ -233,6 +239,14 @@ void net_dmg(
 	*((uint64_t*)(pkt+16))=nkld;
 	memcpy(pkt+24,kld,kldsz);
 	sndpkt(pkt,pktsz);
+	ENetEvent event;
+	while(enet_host_service(host,&event,1)>0){
+		if(event.type==ENET_EVENT_TYPE_RECEIVE&&*event.packet->data==PT_ACK){
+			return E_SUCC;
+		}
+	}
+	fputs("ERROR: peer did not acknowledge damage packet being sent\n",stderr);
+	return E_NO_ACK;
 }
 void net_endtrn(){
 	const uint8_t pt=PT_ETRN;

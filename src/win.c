@@ -1,3 +1,4 @@
+#include<malloc.h>
 #include<stdio.h>
 #include"grphcs.h"
 #include"main.h"
@@ -23,6 +24,7 @@ static void addchr(txtbox_t*,uint16_t,uint32_t,uint64_t,uint64_t);
 static int8_t exitmode(uint16_t);
 static int8_t fire(float,float);
 static int8_t endgm(bool);
+static uint64_t ret(int64_t);
 GLFWwindow*win_open(int8_t*__restrict err){
 	if(!glfwInit()){
 		*err=E_GLFW_INIT_FAIL;
@@ -72,6 +74,9 @@ static void mousin(
 				const clkbl_t*top=NULL;
 				float topz=1;
 				for(;i<end;i++){
+					if(i->hdn){
+						continue;
+					}
 					const uint16_t eid=i->eid;
 					int8_t err;
 					const posn_t p=getposn(eid,&err);
@@ -173,6 +178,9 @@ static void mousin(
 			const rclkbl_t*i=rclkbls.buf;
 			const rclkbl_t*const __restrict end=i+rclkbls.nels;
 			for(;i<end;i++){
+				if(i->hdn){
+					continue;
+				}
 				const uint16_t eid=i->eid;
 				int8_t err;
 				const posn_t p=getposn(eid,&err);
@@ -339,6 +347,9 @@ static void keyin(
 		}else{
 			switch(key){
 				case'M':
+					if(win_frftbtn){
+						return;
+					}
 					if(win_inmode==INMODE_MOVE){
 						exitmode(unit_sel);
 					}else if(unit_sel){
@@ -365,6 +376,9 @@ static void keyin(
 					}
 					return;
 				case'F':
+					if(win_frftbtn){
+						return;
+					}
 					if(win_inmode==INMODE_FIRE){
 						exitmode(unit_sel);
 					}else if(unit_sel){
@@ -384,6 +398,58 @@ static void keyin(
 							}else{
 								fprintf(stderr,"WARNING: entity %hu has no color\n",udata->arr);
 							}
+							lnklst_t*map[8]={};
+							hshmp_t hshmp={
+								.map=map,
+								.nbkts=8,
+								.hshfnc=ret,
+							};
+							for(
+									const sldr_t*si=udata->sldrs.buf,
+									*const __restrict end=si+udata->sldrs.nels;
+									si<end;si++){
+								for(
+										const uint64_t*wi=si->wpns,*const __restrict end=wi+si->nwpns;
+										wi<end;
+										wi++
+										){
+									const wpn_t*w=unit_wpns+*wi;
+									if(w->base.type==WT_EXPLSV){
+										const double sprd=w->explsv.sprd;
+										hshmp_addifabs(&hshmp,*((int64_t*)&sprd));
+									}
+								}
+							}
+							unit_aoes.buf=malloc(16);
+							unit_aoes.nels=0;
+							unit_aoes.bs=16;
+							uint16_t eid=neweid;
+							for(
+									const lnklst_t*const*mi=(const lnklst_t**)map,
+									*const*const __restrict end=mi+sizeof(map)/8;
+									mi<end;mi++){
+								for(const lnklst_t*li=*mi;li;li=li->nxt){
+									const crsrpos_t pos={
+										.eid=eid,
+										.z=.9,
+									};
+									arrlst_add(&crsrposes,&pos);
+									const ring_t ring={
+										.eid=eid,
+										.r=*((double*)&li->val),
+									};
+									arrlst_add(&rings,&ring);
+									const col_t col={
+										.eid=eid,
+										.r=.75,
+										.a=1,
+									};
+									arrlst_add(&cols,&col);
+									arrlst_add(&unit_aoes,&eid);
+									eid++;
+								}
+							}
+							neweid=eid;
 						}else{
 							fprintf(stderr,"WARNING: entity %hu has no udata\n",unit_sel);
 						}
@@ -534,8 +600,18 @@ static int8_t exitmode(const uint16_t eid){
 		}else{
 			fprintf(stderr,"WARNING: entity %hu has no color\n",eid);
 		}
+		const uint16_t*const ab=unit_aoes.buf;
+		for(const uint16_t*i=ab,*const __restrict end=i+unit_aoes.nels;i<end;i++){
+			delent(*i);
+		}
+		free((void*)ab);
+		unit_aoes.nels=0;
 	}else{
-		fprintf(stderr,"WARNING: win_inmode was set to %hhu despite no unit being selected\n",win_inmode);
+		fprintf(
+			stderr,
+			"WARNING: win_inmode was set to %hhu despite no unit being selected\n",
+			win_inmode
+		);
 		win_clkoff=NULL;
 		win_rclk=NULL;
 	}
@@ -564,9 +640,12 @@ static int8_t fire(const float mx,const float my){
 			return unit_fire(eid);
 		}
 	}
-	return E_SUCC;
+	return unit_shell(unit_sel,mx,my);
 }
 static int8_t endgm(const bool aldvctry){
 	menu_endscrn(aldvctry);
 	return net_dscnct(aldvctry);
+}
+static uint64_t ret(const int64_t x){
+	return x;
 }
