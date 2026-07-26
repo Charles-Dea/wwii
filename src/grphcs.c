@@ -83,23 +83,59 @@ void grphcs_init(){
 		glUniform1f(0,sr);
 		uirshad=uir;
 	}
-	if(loadtex("res/alliedinf.png")){
-		fputs("WARNING: failed to load texture for Allied infantry\n",stderr);
-	}
 	if(loadtex("res/axisinf.png")){
 		fputs("WARNING: failed to load texture for Axis infantry\n",stderr);
 	}
-	if(loadtex("res/alliedinfsel.png")){
-		fputs("WARNING: failed to load texture for selected Allied infantry\n",stderr);
+	if(loadtex("res/alliedinf.png")){
+		fputs("WARNING: failed to load texture for Allied infantry\n",stderr);
 	}
 	if(loadtex("res/axisinfsel.png")){
 		fputs("WARNING: failed to load texture for selected Axis infantry\n",stderr);
 	}
-	if(loadtex("res/alliedinfactd.png")){
-		fputs("WARNING: failed to load texture for acted Allied infantry\n",stderr);
+	if(loadtex("res/alliedinfsel.png")){
+		fputs("WARNING: failed to load texture for selected Allied infantry\n",stderr);
 	}
 	if(loadtex("res/axisinfactd.png")){
 		fputs("WARNING: failed to load texture for acted Axis infantry\n",stderr);
+	}
+	if(loadtex("res/alliedinfactd.png")){
+		fputs("WARNING: failed to load texture for acted Allied infantry\n",stderr);
+	}
+	if(loadtex("res/axismg.png")){
+		fputs("WARNING: failed to load texture for Axis MG\n",stderr);
+	}
+	if(loadtex("res/alliedmg.png")){
+		fputs("WARNING: failed to load texture for Allied MG\n",stderr);
+	}
+	if(loadtex("res/axismgsel.png")){
+		fputs("WARNING: failed to load texture for selected Axis MG\n",stderr);
+	}
+	if(loadtex("res/alliedmgsel.png")){
+		fputs("WARNING: failed to load texture for selected Allied MG\n",stderr);
+	}
+	if(loadtex("res/axismgactd.png")){
+		fputs("WARNING: failed to load texture for acted Axis MG\n",stderr);
+	}
+	if(loadtex("res/alliedmgactd.png")){
+		fputs("WARNING: failed to load texture for acted Allied MG\n",stderr);
+	}
+	if(loadtex("res/axismrtr.png")){
+		fputs("WARNING: failed to load texture for Axis mortar\n",stderr);
+	}
+	if(loadtex("res/alliedmrtr.png")){
+		fputs("WARNING: failed to load texture for Allied mortar\n",stderr);
+	}
+	if(loadtex("res/axismrtrsel.png")){
+		fputs("WARNING: failed to load texture for selected Axis mortar\n",stderr);
+	}
+	if(loadtex("res/alliedmrtrsel.png")){
+		fputs("WARNING: failed to load texture for selected Allied mortar\n",stderr);
+	}
+	if(loadtex("res/axismrtractd.png")){
+		fputs("WARNING: failed to load texture for acted Axis mortar\n",stderr);
+	}
+	if(loadtex("res/alliedmrtractd.png")){
+		fputs("WARNING: failed to load texture for acted Allied mortar\n",stderr);
 	}
 	if(loadtex("res/usflag.png")){
 		fputs("WARNING: failed to load texture for American Flag\n",stderr);
@@ -755,16 +791,19 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		const float angl=atan2f(cy-y,cx-x);
 		const float angla=angl+M_PI/2;
 		const float anglb=angl+3*M_PI/2;
+		const float dx=cx-x;
+		const float dy=cy-y;
+		const float dist=sqrtf(dx*dx+dy*dy)*.02;
 		tri_t*const t=tris+i;
-		t->a.x=cosf(angla)*.01+x;
-		t->a.y=sinf(angla)*.01+y;
+		t->a.x=cosf(angla)*dist+x;
+		t->a.y=sinf(angla)*dist+y;
 		t->a.z=z;
 		t->a.r=r;
 		t->a.g=g;
 		t->a.b=b;
 		t->a.a=a;
-		t->b.x=cosf(anglb)*.01+x;
-		t->b.y=sinf(anglb)*.01+y;
+		t->b.x=cosf(anglb)*dist+x;
+		t->b.y=sinf(anglb)*dist+y;
 		t->b.z=z;
 		t->b.r=r;
 		t->b.g=g;
@@ -862,7 +901,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		const sprite_t*const sprts=a->buf;
 		const uint64_t nels=a->nels;
 		if(!nels){
-			free(sprts);
+			free((void*)sprts);
 			continue;
 		}
 		glBindTexture(GL_TEXTURE_2D,i);
@@ -925,7 +964,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		glDrawElements(GL_TRIANGLES,nels*6,GL_UNSIGNED_INT,0);
 		free(vbosqs);
 		free(ebosqs);
-		free(sprts);
+		free((void*)sprts);
 	}
 	glUseProgram(uirshad);
 	glBindBuffer(GL_ARRAY_BUFFER,uirvbo);
@@ -1042,7 +1081,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		const uiel_t*const buf=a->buf;
 		const uint64_t nels=a->nels;
 		if(!nels){
-			free(buf);
+			free((void*)buf);
 			continue;
 		}
 		glBindTexture(GL_TEXTURE_2D,i);
@@ -1074,7 +1113,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 					break;
 				default:
 					fprintf(stderr,"WARNING: entity has invalid xancr %hhu\n",uiel->xancr);
-					free(buf);
+					free((void*)buf);
 					free(vbosqs);
 					free(ebosqs);
 					continue;
@@ -1092,7 +1131,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 					break;
 				default:
 					fprintf(stderr,"WARNING: entity has invalid yancr %hhu\n",uiel->yancr);
-					free(buf);
+					free((void*)buf);
 					free(vbosqs);
 					free(ebosqs);
 					continue;
@@ -1139,7 +1178,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		glBufferData(GL_ARRAY_BUFFER,vbosqsz,vbosqs,GL_STATIC_DRAW);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER,ebosqsz,ebosqs,GL_STATIC_DRAW);
 		glDrawElements(GL_TRIANGLES,nels*6,GL_UNSIGNED_INT,0);
-		free(buf);
+		free((void*)buf);
 		free(vbosqs);
 		free(ebosqs);
 	}
@@ -1246,7 +1285,7 @@ static int8_t loadtex(const char*const __restrict fn){
 	glTextureParameteri(tex,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
 	glTextureParameteri(tex,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
 	glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,img);
-	free(img);
+	free((void*)img);
 	return E_SUCC;
 }
 static uint32_t mkbuf(const uint32_t type){

@@ -12,7 +12,7 @@ void arrlst_add(arrlst_t*const __restrict arr,const void*const __restrict new){
 		void*const __restrict tmp=malloc(ns);
 		const void*const b=arr->buf;
 		memcpy(tmp,b,els*es);
-		free(b);
+		free((void*)b);
 		arr->buf=tmp;
 		arr->bs=ns;
 	}
@@ -99,7 +99,7 @@ void lnklst_map(const lnklst_t*const __restrict ll,void(*const func)(int64_t)){
 void delnklst(const lnklst_t*const __restrict ll){
 	if(ll){
 		delnklst(ll->nxt);
-		free(ll);
+		free((void*)ll);
 	}
 }
 hshmp_t cpyhshmp(const hshmp_t*const __restrict hm){
@@ -151,7 +151,7 @@ void delhshmp(const hshmp_t*const __restrict hm){
 	for(lnklst_t*const*i=map,*const*const __restrict end=i+hm->nbkts;i<end;i++){
 		delnklst(*i);
 	}
-	free(map);
+	free((void*)map);
 }
 static uint64_t hshmp_indx(const hshmp_t*const __restrict hm,const int64_t val){
 	return hm->hshfnc(val)%hm->nbkts;

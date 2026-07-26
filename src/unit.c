@@ -7,9 +7,13 @@
 #include"net.h"
 #include"win.h"
 #include"unit.h"
-#define INFMVSPD .6
 #define INFICNSZ .1
 #define PNLCHRHGHT .05
+#define INFWDTH .001
+#define FRGHITPRB .002
+#define GRNDMNRNG .004
+#define FRGCVR .5
+#define HECVR .7
 uint16_t unit_sel;
 bool unit_allied;
 bool unit_pltrn;
@@ -17,48 +21,173 @@ uint16_t unit_panel;
 arrlst_t unit_chrs={
 	.es=2,
 };
+arrlst_t unit_aoes={
+	.es=2,
+};
 const wpn_t unit_wpns[]={
 	{
-		.name="M1 Garand",
-		.acc=.025,
-		.rng=1.5,
-		.rpm=30,
-		.type=WT_RFL,
+		.frarm={
+			.base={
+				.name="M1 Garand",
+				.rng=1.5,
+				.rpm=30,
+				.type=WT_FRARM,
+				.flags=WFLAGS_DRCT,
+			},
+			.acc=.025,
+		},
 	},
 	{
-		.name="M1918A2 Browning Automatic Rifle",
-		.acc=.0125,
-		.rng=3,
-		.rpm=150,
-		.type=WT_MG,
+		.frarm={
+			.base={
+				.name="M1 Carbine",
+				.rng=1,
+				.rpm=81,
+				.type=WT_FRARM,
+				.flags=WFLAGS_DRCT,
+			},
+			.acc=.01625,
+		},
 	},
 	{
-		.name="Karabiner 98 kurz",
-		.acc=.0375,
-		.rng=1.5,
-		.rpm=18,
-		.type=WT_RFL,
+		.frarm={
+			.base={
+				.name="M1918A2 Browning Automatic Rifle",
+				.rng=3,
+				.rpm=150,
+				.type=WT_FRARM,
+				.flags=WFLAGS_CREW|WFLAGS_DRCT,
+			},
+			.acc=.0125,
+		},
 	},
 	{
-		.name="Maschinengewehr 42",
-		.acc=.0075,
-		.rng=4,
-		.rpm=225,
-		.type=WT_MG,
+		.frarm={
+			.base={
+				.name="M1911A1 Pistol",
+				.rng=.15,
+				.rpm=11,
+				.type=WT_FRARM,
+			},
+			.acc=.05625,
+		},
 	},
 	{
-		.name="Maschinenpistole 40",
-		.acc=.005,
-		.rng=.8,
-		.rpm=100,
-		.type=WT_SMG,
+		.frarm={
+			.base={
+				.name="M1919A4 Browning Machine Gun",
+				.rng=3,
+				.rpm=200,
+				.type=WT_FRARM,
+				.flags=WFLAGS_CREW|WFLAGS_DRCT,
+			},
+			.acc=.01875,
+		},
 	},
 	{
-		.name="P38",
-		.acc=.0375,
-		.rng=.15,
-		.rpm=50,
-		.type=WT_PSTL,
+		.explsv={
+			.base={
+				.name="M7 Grenade Launcher",
+				.rng=.75,
+				.rpm=10,
+				.type=WT_EXPLSV,
+				.flags=WFLAGS_DRCT,
+			},
+			.sprd=.02,
+			.he=1,
+			.minrng=.04,
+			.nfrags=1150,
+		},
+	},
+	{
+		.explsv={
+			.base={
+				.name="M2 60mm Mortar",
+				.rng=4,
+				.rpm=18,
+				.type=WT_EXPLSV,
+				.flags=WFLAGS_CREW,
+			},
+			.sprd=.2,
+			.he=20,
+			.minrng=.4,
+			.nfrags=2300,
+		},
+	},
+	{
+		.frarm={
+			.base={
+				.name="Karabiner 98 kurz",
+				.rng=1.5,
+				.rpm=18,
+				.type=WT_FRARM,
+				.flags=WFLAGS_DRCT,
+			},
+			.acc=.0375,
+		},
+	},
+	{
+		.frarm={
+			.base={
+				.name="Maschinengewehr 42",
+				.rng=4,
+				.rpm=225,
+				.type=WT_FRARM,
+				.flags=WFLAGS_CREW|WFLAGS_DRCT,
+			},
+			.acc=.0075,
+		},
+	},
+	{
+		.frarm={
+			.base={
+				.name="Maschinenpistole 40",
+				.rpm=100,
+				.rng=.8,
+				.type=WT_FRARM,
+				.flags=WFLAGS_DRCT,
+			},
+			.acc=.005,
+		},
+	},
+	{
+		.frarm={
+			.base={
+				.name="P38",
+				.rng=.15,
+				.rpm=50,
+				.type=WT_FRARM,
+				.flags=WFLAGS_DRCT,
+			},
+			.acc=.0375,
+		},
+	},
+	{
+		.frarm={
+			.base={
+				.name="Maschinengewehr 42",
+				.rng=4,
+				.rpm=236,
+				.type=WT_FRARM,
+				.flags=WFLAGS_CREW|WFLAGS_DRCT,
+			},
+			.acc=.01,
+		},
+	},
+	{
+		.explsv={
+			.base={
+				.name="8cm Granatwerfer 34",
+				.rng=4.8,
+				.rpm=20,
+				.type=WT_EXPLSV,
+				.flags=WFLAGS_CREW,
+			},
+			.sprd=.2,
+			.he=20,
+			.minrng=.4,
+			.nfrags=2300,
+		},
 	},
 };
 static const char*const rnames[]={
@@ -67,18 +196,25 @@ static const char*const rnames[]={
 	"Machine Gunner",
 	"Assistant Machine Gunner",
 	"Rifleman",
+	"Ammo Bearer",
+	"Rifle Grenadier",
+	"Gunner",
+	"Assistant Gunner",
 };
 static int8_t tglsel(uint16_t);
 static int8_t selct(uint16_t);
 static float rndrstr(const char*,float,float);
-static int8_t setinvistex(const udata_t*,uint64_t);
+static int8_t setinvistex(const udata_t*,bool);
 static void
 vsblto(posn_t,const udata_t*const*__restrict,uint64_t,const hshmp_t*__restrict);
 static bool los(posn_t,posn_t,const hshmp_t*__restrict);
 static void inhdgs(const hshmp_t*__restrict,posn_t);
-static uint64_t ret(int64_t);
+static uint64_t getex(const udata_t*);
+static void hitpos(const wpn_t*,double,double,double,double);
+static void dmg(udata_t*,uint8_t,double);
 static void delunit(const udata_t*);
-void mkunit(const float x,const float y,const bool allied){
+static uint64_t ret(int64_t);
+int8_t mkunit(const float x,const float y,const bool allied,const uint8_t type){
 	const uint16_t eid=neweid;
 	const pos_t pos={
 		.eid=eid,
@@ -92,9 +228,19 @@ void mkunit(const float x,const float y,const bool allied){
 		.h=INFICNSZ,
 	};
 	arrlst_add(&dims,&dim);
+	udata_t udata={
+		.eid=eid,
+		.free=delunit,
+		.sldrs={
+			.es=sizeof(sldr_t),
+		},
+		.morale=1,
+		.type=type,
+		.flags=allied,
+	};
 	const tex_t tex={
 		.eid=eid,
-		.tex=allied?TEX_ALLIEDINF:TEX_AXISINF,
+		.tex=getex(&udata),
 	};
 	arrlst_add(&texes,&tex);
 	const clkbl_t clkbl={
@@ -109,156 +255,305 @@ void mkunit(const float x,const float y,const bool allied){
 		.param=eid,
 	};
 	arrlst_add(&rclkbls,&rclkbl);
-	const uint16_t arrow=eid+1;
+	udata.arr=eid+1;
 	const relpos_t arp={
-		.eid=arrow,
+		.eid=udata.arr,
 		.prnt=eid,
 		.z=.5,
 	};
 	arrlst_add(&relposes,&arp);
 	const col_t acol={
-		.eid=arrow,
+		.eid=udata.arr,
 	};
 	arrlst_add(&cols,&acol);
 	const arrow_t arr={
-		.eid=arrow,
+		.eid=udata.arr,
 	};
 	arrlst_add(&arrows,&arr);
-	const uint16_t mvr=arrow+1;
+	udata.mvr=udata.arr+1;
 	const relpos_t mr={
-		.eid=mvr,
+		.eid=udata.mvr,
 		.prnt=eid,
 		.z=.9,
 	};
 	arrlst_add(&relposes,&mr);
-	const ring_t ring={
-		.eid=mvr,
-		.r=INFMVSPD,
+	ring_t ring={
+		.eid=udata.mvr,
 	};
-	arrlst_add(&rings,&ring);
 	const col_t mc={
-		.eid=mvr,
+		.eid=udata.mvr,
 		.b=.75,
 	};
 	arrlst_add(&cols,&mc);
-	const uint16_t sprt1=mvr+1;
+	udata.sprt1=udata.mvr+1;
 	const relpos_t pos1={
-		.eid=sprt1,
+		.eid=udata.sprt1,
 		.prnt=eid,
 		.x=3*INFICNSZ/4,
 	};
 	arrlst_add(&relposes,&pos1);
 	const dim_t dim1={
-		.eid=sprt1,
+		.eid=udata.sprt1,
 		.w=INFICNSZ/2,
 		.h=INFICNSZ,
 	};
 	arrlst_add(&dims,&dim1);
-	const tex_t tex1={
-		.eid=sprt1,
-		.tex=TEX_1,
-	};
-	arrlst_add(&texes,&tex1);
-	const uint16_t sprt0=sprt1+1;
+	udata.sprt0=udata.sprt1+1;
 	const relpos_t pos0={
-		.eid=sprt0,
-		.prnt=sprt1,
+		.eid=udata.sprt0,
+		.prnt=udata.sprt1,
 		.x=INFICNSZ/2,
 	};
 	arrlst_add(&relposes,&pos0);
 	const dim_t dim0={
-		.eid=sprt0,
+		.eid=udata.sprt0,
 		.w=INFICNSZ/2,
 		.h=INFICNSZ,
 	};
 	arrlst_add(&dims,&dim0);
 	sldr_t*sldrs;
-	uint64_t nsldrs;
 	if(allied){
-		sldrs=malloc(12*sizeof(sldr_t));
-		sldrs->role=SR_SQUADLEAD;
-		uint64_t*const slw=malloc(8);
-		*slw=WPN_M1;
-		sldrs->wpns=slw;
-		sldrs->nwpns=1;
-		sldr_t*const ltnt=sldrs+1;
-		ltnt->role=SR_LIEUTENANT;
-		uint64_t*const lw=malloc(8);
-		*lw=WPN_M1;
-		ltnt->wpns=lw;
-		ltnt->nwpns=1;
-		sldr_t*const mg=ltnt+1;
-		mg->role=SR_MGNR;
-		uint64_t*const bar=malloc(8);
-		*bar=WPN_BAR;
-		mg->wpns=bar;
-		mg->nwpns=1;
-		sldr_t*const astmg=mg+1;
-		astmg->role=SR_ASTMGNR;
-		uint64_t*const amgw=malloc(8);
-		*amgw=WPN_M1;
-		astmg->wpns=amgw;
-		astmg->nwpns=1;
-		for(sldr_t*i=astmg+1,*const __restrict end=sldrs+12;i<end;i++){
-			i->role=SR_RFLMAN;
-			uint64_t*const wpn=malloc(8);
-			*wpn=WPN_M1;
-			i->wpns=wpn;
-			i->nwpns=1;
+		switch(type){
+			case UT_INF:
+				sldrs=malloc(12*sizeof(sldr_t));
+				sldrs->role=SR_SQUADLEAD;
+				uint64_t*slw=malloc(8);
+				*slw=WPN_M1;
+				sldrs->wpns=slw;
+				sldrs->nwpns=1;
+				sldr_t*const ltnt=sldrs+1;
+				ltnt->role=SR_LIEUTENANT;
+				uint64_t*const lw=malloc(8);
+				*lw=WPN_M1;
+				ltnt->wpns=lw;
+				ltnt->nwpns=1;
+				sldr_t*mg=ltnt+1;
+				mg->role=SR_MGNR;
+				uint64_t*const bar=malloc(8);
+				*bar=WPN_BAR;
+				mg->wpns=bar;
+				mg->nwpns=1;
+				sldr_t*astmg=mg+1;
+				astmg->role=SR_ASTMGNR;
+				uint64_t*const amgw=malloc(8);
+				*amgw=WPN_M1;
+				astmg->wpns=amgw;
+				astmg->nwpns=1;
+				sldr_t*const ambr=astmg+1;
+				ambr->role=SR_AMBRER;
+				uint64_t*const abw=malloc(8);
+				*abw=WPN_M1;
+				ambr->wpns=abw;
+				ambr->nwpns=1;
+				for(sldr_t*i=ambr+1,*const __restrict last=ambr+2;i<=last;i++){
+					i->role=SR_GRNDR;
+					uint64_t*const wpns=malloc(16);
+					*wpns=WPN_M1;
+					wpns[1]=WPN_M7;
+					i->wpns=wpns;
+					i->nwpns=2;
+				}
+				for(sldr_t*i=ambr+3,*const __restrict end=sldrs+12;i<end;i++){
+					i->role=SR_RFLMAN;
+					uint64_t*const wpn=malloc(8);
+					*wpn=WPN_M1;
+					i->wpns=wpn;
+					i->nwpns=1;
+				}
+				udata.sldrs.nels=12;
+				udata.spd=.6;
+				ring.r=.6;
+				break;
+			case UT_MG:
+				sldrs=malloc(5*sizeof(sldr_t));
+				sldrs->role=SR_SQUADLEAD;
+				slw=malloc(8);
+				*slw=WPN_M1;
+				sldrs->wpns=slw;
+				sldrs->nwpns=1;
+				mg=sldrs+1;
+				mg->role=SR_GNR;
+				uint64_t*const m1919=malloc(8);
+				*m1919=WPN_M1919;
+				mg->wpns=m1919;
+				mg->nwpns=1;
+				astmg=mg+1;
+				astmg->role=SR_ASTGNR;
+				uint64_t*m1911=malloc(8);
+				*m1911=WPN_M1911;
+				astmg->wpns=m1911;
+				astmg->nwpns=1;
+				for(sldr_t*i=astmg+1,*const __restrict end=sldrs+5;i<end;i++){
+					i->role=SR_AMBRER;
+					uint64_t*const crbn=malloc(8);
+					*crbn=WPN_M1CRBN;
+					i->wpns=crbn;
+					i->nwpns=1;
+				}
+				udata.sldrs.nels=5;
+				udata.spd=.3;
+				ring.r=.3;
+				break;
+			case UT_MRTR:
+				sldrs=malloc(5*sizeof(sldr_t));
+				sldrs->role=SR_SQUADLEAD;
+				slw=malloc(8);
+				*slw=WPN_M1;
+				sldrs->wpns=slw;
+				sldrs->nwpns=1;
+				sldr_t*const gnr=sldrs+1;
+				gnr->role=SR_GNR;
+				uint64_t*const gnrwpns=malloc(16);
+				*gnrwpns=WPN_M2;
+				gnrwpns[1]=WPN_M1911;
+				gnr->wpns=gnrwpns;
+				gnr->nwpns=2;
+				sldr_t*const astgnr=gnr+1;
+				astgnr->role=SR_ASTGNR;
+				m1911=malloc(8);
+				*m1911=WPN_M1911;
+				astgnr->wpns=m1911;
+				astgnr->nwpns=1;
+				for(sldr_t*i=astgnr+1,*const __restrict end=sldrs+5;i<end;i++){
+					i->role=SR_AMBRER;
+					uint64_t*const m1=malloc(8);
+					*m1=WPN_M1CRBN;
+					i->wpns=m1;
+					i->nwpns=1;
+				}
+				udata.sldrs.nels=5;
+				udata.spd=.3;
+				ring.r=.3;
+				break;
+			default:
+				fprintf(stderr,"ERROR: %hhu is not a valid unit type\n",type);
+				delent(eid);
+				delent(udata.arr);
+				delent(udata.mvr);
+				delent(udata.sprt0);
+				delent(udata.sprt1);
+				return E_INVALD_UT;
 		}
-		nsldrs=12;
+		udata.sldrs.buf=sldrs;
 	}else{
-		sldrs=malloc(10*sizeof(sldr_t));
-		sldrs->role=SR_SQUADLEAD;
-		uint64_t*const slw=malloc(8);
-		*slw=WPN_MP40;
-		sldrs->wpns=slw;
-		sldrs->nwpns=1;
-		sldr_t*const ltnt=sldrs+1;
-		ltnt->role=SR_LIEUTENANT;
-		uint64_t*const lw=malloc(8);
-		*lw=WPN_MP40;
-		ltnt->wpns=lw;
-		ltnt->nwpns=1;
-		sldr_t*const mg=ltnt+1;
-		mg->role=SR_MGNR;
-		uint64_t*const mgws=malloc(16);
-		*mgws=WPN_MG42;
-		mgws[1]=WPN_P38;
-		mg->wpns=mgws;
-		mg->nwpns=2;
-		for(sldr_t*i=mg+1,*const __restrict end=sldrs+10;i<end;i++){
-			i->role=SR_RFLMAN;
-			uint64_t*const rfl=malloc(8);
-			*rfl=WPN_KAR98;
-			i->wpns=rfl;
-			i->nwpns=1;
+		switch(type){
+			case UT_INF:
+				sldrs=malloc(10*sizeof(sldr_t));
+				sldrs->role=SR_SQUADLEAD;
+				uint64_t*const slw=malloc(8);
+				*slw=WPN_MP40;
+				sldrs->wpns=slw;
+				sldrs->nwpns=1;
+				sldr_t*const ltnt=sldrs+1;
+				ltnt->role=SR_LIEUTENANT;
+				uint64_t*const lw=malloc(8);
+				*lw=WPN_MP40;
+				ltnt->wpns=lw;
+				ltnt->nwpns=1;
+				sldr_t*mg=ltnt+1;
+				mg->role=SR_MGNR;
+				uint64_t*const mgws=malloc(16);
+				*mgws=WPN_MG42;
+				mgws[1]=WPN_P38;
+				mg->wpns=mgws;
+				mg->nwpns=2;
+				for(sldr_t*i=mg+1,*const __restrict end=sldrs+10;i<end;i++){
+					i->role=SR_RFLMAN;
+					uint64_t*const rfl=malloc(8);
+					*rfl=WPN_KAR98;
+					i->wpns=rfl;
+					i->nwpns=1;
+				}
+				udata.sldrs.nels=10;
+				udata.spd=.6;
+				ring.r=.6;
+				break;
+			case UT_MG:
+				sldrs=malloc(6*sizeof(sldr_t));
+				sldrs->role=SR_SQUADLEAD;
+				uint64_t*mp40=malloc(8);
+				*mp40=WPN_MP40;
+				sldrs->wpns=mp40;
+				sldrs->nwpns=1;
+				mg=sldrs+1;
+				mg->role=SR_GNR;
+				uint64_t*const mgw=malloc(16);
+				*mgw=WPN_MG42TRI;
+				mgw[1]=WPN_P38;
+				mg->wpns=mgw;
+				mg->nwpns=2;
+				sldr_t*ast=mg+1;
+				ast->role=SR_ASTGNR;
+				uint64_t*p38=malloc(8);
+				*p38=WPN_P38;
+				ast->wpns=p38;
+				ast->nwpns=1;
+				for(sldr_t*i=ast+1,*const __restrict end=sldrs+6;i<end;i++){
+					i->role=SR_RFLMAN;
+					uint64_t*const kar98k=malloc(8);
+					*kar98k=WPN_KAR98;
+					i->wpns=kar98k;
+					i->nwpns=1;
+				}
+				udata.sldrs.nels=6;
+				udata.spd=.3;
+				ring.r=.3;
+				break;
+			case UT_MRTR:
+				sldrs=malloc(4*sizeof(sldr_t));
+				sldrs->role=SR_SQUADLEAD;
+				mp40=malloc(8);
+				*mp40=WPN_MP40;
+				sldrs->wpns=mp40;
+				sldrs->nwpns=1;
+				sldr_t*const gnr=sldrs+1;
+				gnr->role=SR_GNR;
+				uint64_t*const gw=malloc(16);
+				*gw=WPN_GRW34;
+				gw[1]=WPN_P38;
+				gnr->wpns=gw;
+				gnr->nwpns=2;
+				ast=gnr+1;
+				ast->role=SR_ASTGNR;
+				p38=malloc(8);
+				*p38=WPN_P38;
+				ast->wpns=p38;
+				ast->nwpns=1;
+				sldr_t*const ambr=ast+1;
+				ambr->role=SR_AMBRER;
+				uint64_t*const kar98k=malloc(8);
+				*kar98k=WPN_KAR98;
+				ambr->wpns=kar98k;
+				ambr->nwpns=1;
+				udata.sldrs.nels=4;
+				udata.spd=.3;
+				ring.r=.3;
+				break;
+			default:
+				fprintf(stderr,"ERROR: %hhu is not a valid unit type\n",type);
+				delent(eid);
+				delent(udata.arr);
+				delent(udata.mvr);
+				delent(udata.sprt0);
+				delent(udata.sprt1);
+				return E_INVALD_UT;
 		}
-		nsldrs=10;
 	}
+	udata.sldrs.buf=sldrs;
+	const tex_t tex1={
+		.eid=udata.sprt1,
+		.tex=udata.sldrs.nels/10+TEX_0,
+	};
+	arrlst_add(&texes,&tex1);
 	const tex_t tex0={
-		.eid=sprt0,
-		.tex=nsldrs%10+TEX_0,
+		.eid=udata.sprt0,
+		.tex=udata.sldrs.nels%10+TEX_0,
 	};
 	arrlst_add(&texes,&tex0);
-	const udata_t udata={
-		.eid=eid,
-		.arr=arrow,
-		.sprt1=sprt1,
-		.sprt0=sprt0,
-		.free=delunit,
-		.sldrs={
-			.buf=sldrs,
-			.nels=nsldrs,
-			.bs=nsldrs*8,
-			.es=sizeof(sldr_t),
-		},
-		.morale=1,
-		.mvr=mvr,
-		.flags=allied,
-	};
+	arrlst_add(&rings,&ring);
 	arrlst_add(&udatas,&udata);
-	neweid=sprt0+1;
+	neweid=udata.sprt0+1;
+	return E_SUCC;
 }
 void unit_chklos(){
 	arrlst_t frndly={
@@ -302,7 +597,7 @@ void unit_chklos(){
 			u->flags|=UFLAGS_VIS;
 			tex_t*const t=getent(&texes,eid);
 			if(t){
-				t->tex=utex;
+				t->tex=getex(u);
 			}else{
 				fprintf(stderr,"WARNING: entity %hu has no texture\n",eid);
 			}
@@ -318,6 +613,12 @@ void unit_chklos(){
 				t0->tex=nsldrs%10+TEX_0;
 			}else{
 				fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt0);
+			}
+			clkbl_t*const clkbl=getent(&clkbls,eid);
+			if(clkbl){
+				clkbl->hdn=0;
+			}else{
+				fprintf(stderr,"WARNING: entity %hu has no clkbl\n",eid);
 			}
 		}else{
 			u->flags&=~UFLAGS_VIS;
@@ -339,10 +640,19 @@ void unit_chklos(){
 			}else{
 				fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt0);
 			}
+			clkbl_t*const clkbl=getent(&clkbls,eid);
+			if(clkbl){
+				clkbl->hdn=1;
+			}else{
+				fprintf(stderr,"WARNING: entity %hu has no clkbl\n",eid);
+			}
 		}
 	}
 }
 int8_t unit_move(const uint16_t eid,const float x,const float y){
+	if(win_frftbtn){
+		return E_SUCC;
+	}
 	pos_t*const p=getent(&poses,eid);
 	if(!p){
 		fprintf(stderr,"ERROR: entity %hu has no position\n",eid);
@@ -355,7 +665,7 @@ int8_t unit_move(const uint16_t eid,const float x,const float y){
 	}
 	const float dx=x-p->x;
 	const float dy=y-p->y;
-	if(sqrtf(dx*dx+dy*dy)>INFMVSPD*u->morale){
+	if(sqrtf(dx*dx+dy*dy)>u->spd*u->morale){
 		return E_SUCC;
 	}
 	p->x=x;
@@ -373,7 +683,7 @@ int8_t unit_move(const uint16_t eid,const float x,const float y){
 	u->flags=flags;
 	tex_t*const t=getent(&texes,eid);
 	if(t){
-		t->tex=flags&UFLAGS_ALLIED?TEX_ALLIEDINFACTD:TEX_AXISINFACTD;
+		t->tex=getex(u);
 	}else{
 		fprintf(stderr,"WARNING: entity %hu has no texture\n",eid);
 	}
@@ -382,6 +692,9 @@ int8_t unit_move(const uint16_t eid,const float x,const float y){
 	return E_SUCC;
 }
 int8_t unit_fire(const uint16_t trgt){
+	if(win_frftbtn){
+		return E_SUCC;
+	}
 	const uint16_t shtr=unit_sel;
 	if(!shtr){
 		return E_SUCC;
@@ -410,12 +723,19 @@ int8_t unit_fire(const uint16_t trgt){
 		.hshfnc=ret,
 	};
 	inhdgs(&hdgs,tp);
-	const double cvr=hshmp_empty(&hdgs)?1:.3;
+	double frarmcvr,fragcvr,hecvr;
+	if(hshmp_empty(&hdgs)){
+		frarmcvr=1;
+		fragcvr=1;
+		hecvr=1;
+	}else{
+		frarmcvr=.3;
+		fragcvr=FRGCVR;
+		hecvr=HECVR;
+	}
 	const posn_t sp=getposn(shtr,&err);
 	inhdgs(&hdgs,sp);
-	if(!los(sp,tp,&hdgs)){
-		return E_SUCC;
-	}
+	const bool unblkd=los(sp,tp,&hdgs);
 	for(lnklst_t*const*i=map,*const*const __restrict end=i+sizeof(map)/8;i<end;i++){
 		delnklst(*i);
 	}
@@ -426,72 +746,109 @@ int8_t unit_fire(const uint16_t trgt){
 	bool fired=0;
 	uint64_t hits=0;
 	double mrlchng=0;
-	for(const sldr_t*si=su->sldrs.buf,*const __restrict end=si+su->sldrs.nels;si<end;si++){
-		double acc;
-		uint16_t rpm;
+	const uint64_t nts=tu->sldrs.nels;
+	const double ntsd=nts;
+	for(
+			const sldr_t*si=su->sldrs.buf,*const __restrict end=si+su->sldrs.nels;
+			si<end;
+			si++){
 		double ek=-0.1;
+		const wpn_t*bw;
 		for(const uint64_t*wi=si->wpns,*const __restrict wend=wi+si->nwpns;wi<wend;wi++){
 			const wpn_t*const w=unit_wpns+*wi;
-			const float rng=w->rng;
-			if(d>rng){
+			const float rng=w->base.rng;
+			const int8_t flags=w->base.flags;
+			if(d>rng||(!unblkd&&(flags&WFLAGS_DRCT))){
 				continue;
 			}
 			const double dor=d/rng;
-			const double a=w->acc*smrl*((double)1-dor*dor)*cvr;
-			const uint16_t r=w->rpm;
-			const double e=a*r;
+			double prof;
+			if(flags&WFLAGS_CREW){
+				switch(si->role){
+					case SR_MGNR:
+					case SR_GNR:
+						prof=1;
+						break;
+					case SR_ASTMGNR:
+					case SR_ASTGNR:
+						prof=.8;
+						break;
+					default:
+						prof=.6;
+				}
+			}else{
+				prof=1;
+			}
+			double e;
+			switch(w->base.type){
+				case WT_FRARM:
+					const double a=w->frarm.acc*smrl*((double)1-dor*dor)*frarmcvr*prof;
+					const uint16_t r=w->base.rpm;
+					e=a*r;
+					break;
+				case WT_EXPLSV:
+					if(d<w->explsv.minrng){
+						continue;
+					}
+					const double ed=w->explsv.sprd*dor/prof;
+					const double edp2=ed*ed;
+					const double cosine=1.0-INFWDTH*INFWDTH/(2*edp2);
+					const double angl=acos(cosine);
+					const double bp=angl/(2.0*M_PI);
+					const uint64_t rpm=(double)w->base.rpm*prof;
+					e=bp*rpm*(w->explsv.he*hecvr+w->explsv.nfrags*FRGHITPRB*ntsd*fragcvr);
+					break;
+				default:
+					fprintf(stderr,"WARNING: weapon has invalid type %hhu\n",w->base.type);
+					continue;
+			}
 			if(e>ek){
 				ek=e;
-				acc=a;
-				rpm=r;
+				bw=w;
 				fired=1;
 			}
 		}
 		if(ek<0){
 			continue;
 		}
-		mrlchng-=rpm*.0005;
-		const uint32_t acci=acc*RAND_MAX;
-		for(uint16_t _=rpm;_;_--){
-			if(rand()<=acci){
-				hits++;
-				mrlchng-=.05;
-			}
+		switch(bw->base.type){
+			case WT_FRARM:
+				const double dor=d/bw->base.rng;
+				double prof;
+				if(bw->base.flags&WFLAGS_CREW){
+					switch(si->role){
+						case SR_MGNR:
+							prof=1;
+							break;
+						case SR_ASTMGNR:
+							prof=.8;
+							break;
+						default:
+							prof=.6;
+					}
+				}else{
+					prof=1;
+				}
+				const double acc=bw->frarm.acc*smrl*((double)1-dor*dor)*frarmcvr*prof;
+				const uint16_t rpm=bw->base.rpm;
+				mrlchng-=rpm*.0005;
+				const uint32_t acci=acc*RAND_MAX;
+				for(uint16_t _=rpm;_;_--){
+					if(rand()<=acci){
+						hits++;
+						mrlchng-=.05;
+					}
+				}
+				break;
+			case WT_EXPLSV:
+				hitpos(bw,sp.x,sp.y,tp.x,tp.y);
+				break;
 		}
 	}
 	if(!fired){
 		return E_SUCC;
 	}
-	if(hits){
-		if(hits>=tu->sldrs.nels){
-			delent(trgt);
-			net_dstr(trgt);
-		}else{
-			uint64_t kld[hits];
-			uint64_t*i=kld;
-			arrlst_t*const sldrs=&tu->sldrs;
-			for(uint8_t _=hits;_;_--,i++){
-				const uint64_t s=(uint64_t)rand()%sldrs->nels;
-				*i=s;
-				arrlst_del(sldrs,s);
-			}
-			const uint64_t nsldrs=sldrs->nels;
-			tex_t*const tex1=getent(&texes,tu->sprt1);
-			if(tex1){
-				tex1->tex=nsldrs/10+TEX_0;
-			}else{
-				fprintf(stderr,"WARNING: entity %hu has no texture\n",tu->sprt1);
-			}
-			tex_t*const tex0=getent(&texes,tu->sprt0);
-			if(tex0){
-				tex0->tex=nsldrs%10+TEX_0;
-			}else{
-				fprintf(stderr,"WARNING: entity %hu has no texture\n",tu->sprt0);
-			}
-			unit_chmrl(tu,mrlchng);
-			net_dmg(trgt,kld,hits,mrlchng);
-		}
-	}
+	dmg(tu,hits,mrlchng);
 	err=unit_deselct(shtr);
 	if(err){
 		fprintf(
@@ -504,9 +861,50 @@ int8_t unit_fire(const uint16_t trgt){
 	}
 	tex_t*const t=getent(&texes,shtr);
 	if(t){
-		t->tex=sflags&UFLAGS_ALLIED?TEX_ALLIEDINFACTD:TEX_AXISINFACTD;
+		t->tex=getex(su);
 	}else{
 		fprintf(stderr,"WARNING: entity %hu has no texture\n",shtr);
+	}
+	return E_SUCC;
+}
+int8_t unit_shell(const uint16_t eid,const float x,const float y){
+	int8_t err;
+	const posn_t posn=getposn(eid,&err);
+	if(err){
+		fprintf(stderr,"ERROR: entity %hu has no position\n",eid);
+		return E_NO_ENT;
+	}
+	const float dx=x-posn.x;
+	const float dy=y-posn.y;
+	const float d=sqrtf(dx*dx+dy*dy);
+	udata_t*const u=getent(&udatas,eid);
+	if(!u){
+		fprintf(stderr,"ERROR: entity %hu has no udata\n",eid);
+		return E_NO_ENT;
+	}
+	bool fired=0;
+	for(const sldr_t*si=u->sldrs.buf,*const __restrict end=si+u->sldrs.nels;si<end;si++){
+		double ek=-.1;
+		const wpn_t*bw=NULL;
+		for(const uint64_t*wi=si->wpns,*const __restrict end=wi+si->nwpns;wi<end;wi++){
+			const wpn_t*const w=unit_wpns+*wi;
+			if(w->base.type!=WT_EXPLSV||d>w->base.rng||d<w->explsv.minrng){
+				continue;
+			}
+			const double e=w->base.rpm*(w->explsv.he+w->explsv.nfrags*FRGHITPRB);
+			if(e>ek){
+				ek=e;
+				bw=w;
+			}
+		}
+		if(bw){
+			fired=1;
+			hitpos(bw,posn.x,posn.y,x,y);
+		}
+	}
+	if(fired){
+		u->flags|=UFLAGS_ACTED;
+		unit_deselct(eid);
 	}
 	return E_SUCC;
 }
@@ -520,7 +918,17 @@ int8_t unit_nxtrn(const bool ald){
 			if((flags&UFLAGS_ALLIED)==ald){
 				i->flags=flags;
 				unit_chmrl(i,.1);
-				unit_deselct(i->eid);
+				if(flags&UFLAGS_SEL){
+					unit_deselct(i->eid);
+				}else{
+					tex_t*const tex=getent(&texes,i->eid);
+					if(tex){
+						tex->tex=getex(i);
+					}else{
+						fprintf(stderr,"WARNING: entity %hu has no texture\n",i->eid);
+						continue;
+					}
+				}
 			}
 		}
 		net_endtrn();
@@ -539,6 +947,9 @@ int8_t unit_nxtrn(const bool ald){
 	return E_SUCC;
 }
 int8_t unit_deselct(const uint16_t eid){
+	if(win_frftbtn){
+		return E_SUCC;
+	}
 	tex_t*const t=getent(&texes,eid);
 	if(!t){
 		fprintf(stderr,"ERROR: entity %hu has no texture\n",eid);
@@ -550,8 +961,8 @@ int8_t unit_deselct(const uint16_t eid){
 		return E_NO_ENT;
 	}
 	const int8_t flags=u->flags&~UFLAGS_SEL;
-	t->tex=flags&UFLAGS_ALLIED?TEX_ALLIEDINF:TEX_AXISINF;
 	u->flags=flags;
+	t->tex=getex(u);
 	col_t*const pcol=getent(&cols,unit_panel);
 	if(pcol){
 		pcol->a=0;
@@ -568,7 +979,7 @@ int8_t unit_deselct(const uint16_t eid){
 	for(const uint16_t*i=rngs,*const __restrict end=i+u->nrngs;i<end;i++){
 		delent(*i);
 	}
-	free(rngs);
+	free((void*)rngs);
 	u->rngs=NULL;
 	u->nrngs=0;
 	col_t*const arrcol=getent(&cols,u->arr);
@@ -577,11 +988,17 @@ int8_t unit_deselct(const uint16_t eid){
 	}else{
 		fprintf(stderr,"WARNING: entity %hu has no color\n",u->arr);
 	}
-	setinvistex(u,flags&UFLAGS_ALLIED?TEX_AXISINF:TEX_ALLIEDINF);
+	setinvistex(u,0);
 	for(const uint16_t*i=unit_chrs.buf,*const __restrict end=i+unit_chrs.nels;i<end;i++){
 		delent(*i);
 	}
 	unit_chrs.nels=0;
+	const uint16_t*const aoeb=unit_aoes.buf;
+	for(const uint16_t*i=aoeb,*const __restrict end=aoeb+unit_aoes.nels;i<end;i++){
+		delent(*i);
+	}
+	free((void*)aoeb);
+	unit_aoes.nels=0;
 	win_clkoff=NULL;
 	win_rclk=NULL;
 	win_inmode=INMODE_NORM;
@@ -598,7 +1015,7 @@ void unit_chmrl(udata_t*const u,const double mrld){
 	u->morale=mrl;
 	ring_t*const r=getent(&rings,u->mvr);
 	if(r){
-		r->r=INFMVSPD*mrl;
+		r->r=u->spd*mrl;
 	}else{
 		fprintf(stderr,"WARNING: entity %hu has no radius\n",u->mvr);
 	}
@@ -633,9 +1050,10 @@ static int8_t selct(const uint16_t eid){
 	if(flags&UFLAGS_ACTED||(flags&UFLAGS_ALLIED)!=unit_allied){
 		return E_SUCC;
 	}
+	u->flags=flags;
 	tex_t*const t=getent(&texes,eid);
 	if(t){
-		t->tex=flags&UFLAGS_ALLIED?TEX_ALLIEDINFSEL:TEX_AXISINFSEL;
+		t->tex=getex(u);
 	}else{
 		fprintf(stderr,"WARNING: entity %hu has no texture\n",eid);
 	}
@@ -650,7 +1068,7 @@ static int8_t selct(const uint16_t eid){
 			const uint64_t nwpns=si->nwpns;
 			uint64_t len=strlen(rnames[si->role])+((nwpns-1)<<1)+3;
 			for(const uint64_t*wi=si->wpns,*const __restrict wend=wi+nwpns;wi<wend;wi++){
-				len+=strlen(unit_wpns[*wi].name);
+				len+=strlen(unit_wpns[*wi].base.name);
 			}
 			if(len>longest){
 				longest=len;
@@ -671,7 +1089,7 @@ static int8_t selct(const uint16_t eid){
 	for(const sldr_t*si=sldrs;si<send;si++){
 		float x=rndrstr(" - ",rndrstr(rnames[si->role],PNLCHRHGHT/4,y),y);
 		for(const uint64_t*wi=si->wpns,*const __restrict lst=wi+si->nwpns-1;wi<=lst;wi++){
-			x=rndrstr(unit_wpns[*wi].name,x,y);
+			x=rndrstr(unit_wpns[*wi].base.name,x,y);
 			if(wi<lst){
 				x=rndrstr(", ",x,y);
 			}
@@ -693,8 +1111,13 @@ static int8_t selct(const uint16_t eid){
 	};
 	for(const sldr_t*si=sldrs;si<send;si++){
 		for(const uint64_t*wi=si->wpns,*const __restrict wend=wi+si->nwpns;wi<wend;wi++){
-			const double rng=unit_wpns[*wi].rng;
+			const wpn_t*const w=unit_wpns+*wi;
+			const double rng=w->base.rng;
 			hshmp_addifabs(&rngst,*((int64_t*)&rng));
+			if(w->base.type==WT_EXPLSV){
+				const double mrng=w->explsv.minrng;
+				hshmp_addifabs(&rngst,*((int64_t*)&mrng));
+			}
 		}
 	}
 	arrlst_t rngs={
@@ -732,7 +1155,7 @@ static int8_t selct(const uint16_t eid){
 	for(lnklst_t*const*i=map,*const*const __restrict end=i+sizeof(map)/8;i<end;i++){
 		delnklst(*i);
 	}
-	setinvistex(u,flags&UFLAGS_ALLIED?TEX_AXISINFACTD:TEX_ALLIEDINFACTD);
+	setinvistex(u,1);
 	win_clkoff=(int8_t(*)(int64_t,float,float))unit_deselct;
 	win_rclk=(int8_t(*)(int64_t,float,float))unit_move;
 	win_clkoffparam=eid;
@@ -776,7 +1199,7 @@ static float rndrstr(const char*str,float x,const float y){
 	neweid=eid;
 	return x;
 }
-static int8_t setinvistex(const udata_t*const u,const uint64_t t){
+static int8_t setinvistex(const udata_t*const u,const bool shade){
 	int8_t err;
 	const posn_t posn=getposn(u->eid,&err);
 	if(err){
@@ -808,10 +1231,11 @@ static int8_t setinvistex(const udata_t*const u,const uint64_t t){
 			){
 		const udata_t*const u=*i;
 		const uint16_t eid=u->eid;
+		const int8_t flags=u->flags;
 		if(u->flags&UFLAGS_VIS&&!hshmp_in(&vsbl,eid)){
 			tex_t*const tex=getent(&texes,eid);
 			if(tex){
-				tex->tex=t;
+				tex->tex=getex(u)+(TEX_AXISINFACTD-TEX_AXISINF)*shade;
 			}else{
 				fprintf(stderr,"WARNING: entity %hu has no texture\n",eid);
 			}
@@ -949,6 +1373,131 @@ static void inhdgs(const hshmp_t*const __restrict hdgs,const posn_t up){
 		}
 	}
 }
+static uint64_t getex(const udata_t*const u){
+	uint64_t tex=u->type*(TEX_AXISMG-TEX_AXISINF)+TEX_AXISINF;
+	const int8_t flags=u->flags;
+	const bool ald=flags&UFLAGS_ALLIED;
+	if(flags&UFLAGS_SEL){
+		tex+=TEX_AXISINFSEL-TEX_AXISINF;
+	}else if(flags&UFLAGS_ACTED){
+		tex+=TEX_AXISINFACTD-TEX_AXISINF;
+	}
+	if(ald){
+		tex+=TEX_ALLIEDINF-TEX_AXISINF;
+	}
+	return tex;
+}
+static void hitpos(
+		const wpn_t*const wpn,
+		const double wx,
+		const double wy,
+		const double tx,
+		const double ty){
+	const double wtotdx=wx-tx;
+	const double wtotdy=wy-ty;
+	const double wtotdp2=wtotdx*wtotdx+wtotdy*wtotdy;
+	const double wtotd=sqrt(wtotdp2);
+	const uint64_t nunits=udatas.nels;
+	uint8_t dmgs[nunits]={};
+	double mrlchngs[nunits]={};
+	udata_t*const units=udatas.buf;
+	for(uint16_t _=wpn->base.rpm;_;_--){
+		const double dist=wpn->explsv.sprd*wtotd/wpn->base.rng*rand()/(float)RAND_MAX;
+		const double angl=(float)RAND_MAX*rand()/(2.0*M_PI);
+		const double ex=tx+cos(angl)*dist;
+		const double ey=ty+sin(angl)*dist;
+		uint8_t*di=dmgs;
+		double*mi=mrlchngs;
+		for(
+				const udata_t*ui=units,*const __restrict end=units+nunits;
+				ui<end;
+				ui++,di++,mi++
+				){
+			int8_t err;
+			const posn_t up=getposn(ui->eid,&err);
+			if(err){
+				fprintf(stderr,"WARNING: entity %hu has no posistion\n",ui->eid);
+				continue;
+			}
+			const double udx=up.x-ex;
+			const double udy=up.y-ey;
+			const double udp2=udx*udx+udy*udy;
+			const double ud=sqrt(udp2);
+			const double he=wpn->explsv.he;
+			if(ud>he*.01){
+				continue;
+			}
+			const double bp=acos(1.0-INFWDTH*INFWDTH/(2.0*udp2))/(2.0*M_PI);
+			lnklst_t*map[8]={};
+			const hshmp_t hdgs={
+				.map=map,
+				.nbkts=8,
+				.hshfnc=ret,
+			};
+			const posn_t posn={
+			};
+			inhdgs(&hdgs,up);
+			double fragcvr,hecvr;
+			if(hshmp_empty(&hdgs)){
+				fragcvr=1;
+				hecvr=1;
+			}else{
+				fragcvr=FRGCVR;
+				hecvr=HECVR;
+			}
+			const double ehk=bp*he*hecvr;
+			uint32_t kls=ehk;
+			kls+=rand()<=(ehk-kls)*(double)RAND_MAX;
+			const double nsldrs=ui->sldrs.nels;
+			for(uint32_t _=bp*wpn->explsv.nfrags;_;_--){
+				kls+=(double)rand()<=(double)RAND_MAX*FRGHITPRB*fragcvr*nsldrs;
+			}
+			*di+=kls;
+			*mi-=he/sqrt(udp2)/10;
+		}
+	}
+	udata_t*ui=units;
+	const double*mi=mrlchngs;
+	for(const uint8_t*di=dmgs,*const __restrict end=dmgs+nunits;di<end;di++,ui++,mi++){
+		dmg(ui,*di,*mi);
+	}
+}
+static void dmg(udata_t*const u,const uint8_t hits,double mrlchng){
+	if(hits){
+		if(hits>=u->sldrs.nels){
+			const uint16_t eid=u->eid;
+			delent(eid);
+			net_dstr(eid);
+		}else{
+			uint64_t kld[hits];
+			uint64_t*i=kld;
+			arrlst_t*const sldrs=&u->sldrs;
+			for(uint8_t _=hits;_;_--,i++){
+				const uint64_t s=(uint64_t)rand()%sldrs->nels;
+				*i=s;
+				arrlst_del(sldrs,s);
+			}
+			if(u->flags&UFLAGS_VIS){
+				const uint64_t nsldrs=sldrs->nels;
+				tex_t*const tex1=getent(&texes,u->sprt1);
+				if(tex1){
+					tex1->tex=nsldrs/10+TEX_0;
+				}else{
+					fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt1);
+				}
+				tex_t*const tex0=getent(&texes,u->sprt0);
+				if(tex0){
+					tex0->tex=nsldrs%10+TEX_0;
+				}else{
+					fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt0);
+				}
+			}
+			mrlchng-=hits*.1;
+			unit_chmrl(u,mrlchng);
+			net_dmg(u->eid,kld,hits,mrlchng);
+		}
+	}
+}
 static void delunit(const udata_t*const u){
 	delent(u->arr);
 	delent(u->mvr);
@@ -959,13 +1508,24 @@ static void delunit(const udata_t*const u){
 		for(const uint16_t*i=rngs,*const __restrict end=rngs+u->nrngs;i<end;i++){
 			delent(*i);
 		}
-		free(rngs);
+		free((void*)rngs);
 	}
 	const sldr_t*const sldrs=u->sldrs.buf;
 	for(const sldr_t*i=sldrs,*const __restrict end=sldrs+u->sldrs.nels;i<end;i++){
 		free(i->wpns);
 	}
-	free(sldrs);
+	free((void*)sldrs);
+	if(u->eid==unit_sel){
+		for(const uint16_t*i=unit_chrs.buf,*const __restrict end=i+unit_chrs.nels;i<end;i++){
+			delent(*i);
+		}
+		col_t*const col=getent(&cols,unit_panel);
+		if(col){
+			col->a=0;
+		}else{
+			fprintf(stderr,"WARNING: entity %hu has no color\n",unit_panel);
+		}
+	}
 }
 static uint64_t ret(const int64_t x){
 	return x;

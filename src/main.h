@@ -16,6 +16,8 @@ enum{
 	E_STRTHST_FAIL=-8,
 	E_CONCT_FAIL=-9,
 	E_DSCNCT_FAIL=-10,
+	E_INVALD_UT=-11,
+	E_NO_ACK=-12,
 };
 enum{
 	XANCR_CENT,
@@ -66,7 +68,8 @@ typedef struct tex_t{
 }tex_t;
 typedef struct clkbl_t{
 	uint16_t eid;
-	int8_t pad0[6];
+	bool hdn;
+	int8_t pad[5];
 	void(*free)(const struct clkbl_t*);
 	int8_t(*func)(int64_t);
 	int64_t param;
@@ -81,9 +84,11 @@ typedef struct udata_t{
 	uint64_t nrngs;
 	uint16_t*chars;
 	uint64_t nchars;
+	float spd;
 	uint16_t mvr;
+	uint8_t type;
 	int8_t flags;
-	int8_t pad[37];
+	int8_t pad[34];
 }udata_t;
 typedef struct relpos_t{
 	uint16_t eid,prnt;
@@ -141,6 +146,12 @@ typedef struct scrnpos_t{
 	float y,z;
 	int8_t pad[8];
 }scrnpos_t;
+typedef struct crsrpos_t{
+	uint16_t eid;
+	int8_t pad[2];
+	float z;
+	void(*free)(const struct crsrpos_t*);
+}crsrpos_t;
 extern double scrnwdth,scrnhght;
 extern uint16_t neweid;
 extern bool running;
@@ -161,6 +172,7 @@ extern arrlst_t flags;
 extern arrlst_t lines;
 extern arrlst_t hedges;
 extern arrlst_t scrnposes;
+extern arrlst_t crsrposes;
 posn_t getposn(uint16_t,int8_t*__restrict);
 void delent(uint16_t);
 void*getent(const arrlst_t*,uint16_t);
