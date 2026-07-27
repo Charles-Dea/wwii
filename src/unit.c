@@ -993,12 +993,15 @@ int8_t unit_deselct(const uint16_t eid){
 		delent(*i);
 	}
 	unit_chrs.nels=0;
-	const uint16_t*const aoeb=unit_aoes.buf;
-	for(const uint16_t*i=aoeb,*const __restrict end=aoeb+unit_aoes.nels;i<end;i++){
-		delent(*i);
+	const uint64_t naoes=unit_aoes.nels;
+	if(naoes){
+		const uint16_t*const aoeb=unit_aoes.buf;
+		for(const uint16_t*i=aoeb,*const __restrict end=aoeb+naoes;i<end;i++){
+			delent(*i);
+		}
+		free((void*)aoeb);
+		unit_aoes.nels=0;
 	}
-	free((void*)aoeb);
-	unit_aoes.nels=0;
 	win_clkoff=NULL;
 	win_rclk=NULL;
 	win_inmode=INMODE_NORM;

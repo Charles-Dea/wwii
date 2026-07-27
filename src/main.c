@@ -205,6 +205,7 @@ void termscene(){
 	win_clkoff=NULL;
 	win_rclk=NULL;
 	win_seltxtbox=0;
+	win_frftbtn=0;
 	unit_sel=0;
 	grphcs_camx=0;
 	grphcs_camy=0;

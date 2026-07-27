@@ -600,12 +600,15 @@ static int8_t exitmode(const uint16_t eid){
 		}else{
 			fprintf(stderr,"WARNING: entity %hu has no color\n",eid);
 		}
-		const uint16_t*const ab=unit_aoes.buf;
-		for(const uint16_t*i=ab,*const __restrict end=i+unit_aoes.nels;i<end;i++){
-			delent(*i);
+		const uint64_t naoes=unit_aoes.nels;
+		if(naoes){
+			const uint16_t*const ab=unit_aoes.buf;
+			for(const uint16_t*i=ab,*const __restrict end=i+naoes;i<end;i++){
+				delent(*i);
+			}
+			free((void*)ab);
+			unit_aoes.nels=0;
 		}
-		free((void*)ab);
-		unit_aoes.nels=0;
 	}else{
 		fprintf(
 			stderr,
