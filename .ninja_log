@@ -1,0 +1,12 @@
+# ninja log v7
+1	150	1785796118754703765	CMakeFiles/wwii.dir/src/structs.c.o	b4dc9ab9c0f86e8
+0	179	1785796118752504725	CMakeFiles/wwii.dir/src/flag.c.o	7193dedf0e0dee6
+1	195	1785796118754586012	CMakeFiles/wwii.dir/src/net.c.o	e580e54e3b948ebe
+1	210	1785796118754469097	CMakeFiles/wwii.dir/src/menu.c.o	fbf08889b4248f55
+1	210	1785796118754946256	CMakeFiles/wwii.dir/src/win.c.o	b6fd77dfd673fe12
+1	218	1785796118754830109	CMakeFiles/wwii.dir/src/unit.c.o	4571c0b35aab4238
+1	220	1785796118754352391	CMakeFiles/wwii.dir/src/main.c.o	3f62dd9685cd7a16
+0	425	1785796118753504720	CMakeFiles/wwii.dir/src/grphcs.c.o	12de534dd6788fbb
+1	22	1785796178265401534	build.ninja	7738c8f10ce5b291
+1	22	1785796178265401534	/home/charlie/code/wwii/cmake_install.cmake	7738c8f10ce5b291
+1	42	1785796179235222596	wwii	e0826adc3cdbcb70
