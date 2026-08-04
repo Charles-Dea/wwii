@@ -1243,7 +1243,8 @@ static int32_t buildshad(const char*const __restrict vs,const char*const __restr
 }
 static int32_t compshad(const uint32_t prog,const uint32_t type,const char*const __restrict fn){
 	const int32_t shad=glCreateShader(type);
-	FILE*const __restrict file=fopen(fn,"r");
+	//Windows and Linux don't agree on what constitues a text file, so they don't get to decide.
+	FILE*const __restrict file=fopen(fn,"rb");
 	if(!file){
 		fprintf(stderr,"ERROR: failed to open %s\n",fn);
 		return E_FOPEN_FAIL;
