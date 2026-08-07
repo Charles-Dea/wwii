@@ -319,10 +319,10 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		.es=sizeof(uir_t),
 	};
 	for(const rect_t*i=rects.buf,*const __restrict end=i+nsqs;i<end;i++){
-		const uint16_t eid=i->eid;
+		const uint32_t eid=i->eid;
 		const col_t*const col=getent(&cols,eid);
 		if(!col){
-			fprintf(stderr,"WARNING: entity %hu has no colors\n",eid);
+			fprintf(stderr,"WARNING: entity %u has no colors\n",eid);
 			continue;
 		}
 		const float a=col->a;
@@ -331,7 +331,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		}
 		const dim_t*const dim=getent(&dims,eid);
 		if(!dim){
-			fprintf(stderr,"WARNING: entity %hu has no dimensions\n",eid);
+			fprintf(stderr,"WARNING: entity %u has no dimensions\n",eid);
 			continue;
 		}
 		int8_t err;
@@ -339,7 +339,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		if(err){
 			const scrnpos_t*const pos=getent(&scrnposes,eid);
 			if(!pos){
-				fprintf(stderr,"WARNING: entity %hu has no position\n",eid);
+				fprintf(stderr,"WARNING: entity %u has no position\n",eid);
 				continue;
 			}
 			const uir_t uir={
@@ -462,7 +462,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 	for(const line_t*i=lines.buf,*const __restrict end=i+lines.nels;i<end;i++){
 		const col_t*const col=getent(&cols,i->eid);
 		if(!col){
-			fprintf(stderr,"WARNING: entity %hu has no color\n",i->eid);
+			fprintf(stderr,"WARNING: entity %u has no color\n",i->eid);
 		}
 		const float a=col->a;
 		if(!a){
@@ -595,11 +595,11 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 	const ring_t*i=rings.buf;
 	const ring_t*const __restrict end=i+rings.nels;
 	for(;i<end;i++){
-		const uint16_t eid=i->eid;
+		const uint32_t eid=i->eid;
 		int8_t err;
 		const posn_t posn=getposn(eid,&err);
 		if(err){
-			fprintf(stderr,"WARNING: entity %hu has no position\n",eid);
+			fprintf(stderr,"WARNING: entity %u has no position\n",eid);
 			continue;
 		}
 		const col_t*const col=getent(&cols,eid);
@@ -613,7 +613,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 			g=col->g;
 			b=col->b;
 		}else{
-			fprintf(stderr,"WARNING: entity %hu has no color\n",eid);
+			fprintf(stderr,"WARNING: entity %u has no color\n",eid);
 			r=1;
 			g=1;
 			b=1;
@@ -731,7 +731,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 	const arrow_t*ai=arrows.buf;
 	const arrow_t*const __restrict aend=ai+arrows.nels;
 	for(;ai<aend;ai++){
-		const uint16_t eid=ai->eid;
+		const uint32_t eid=ai->eid;
 		const col_t*const col=getent(&cols,eid);
 		float r,g,b,a;
 		if(col){
@@ -743,7 +743,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 			g=col->g;
 			b=col->b;
 		}else{
-			fprintf(stderr,"WARNING: entity %hu has no color\n",eid);
+			fprintf(stderr,"WARNING: entity %u has no color\n",eid);
 			r=1;
 			g=1;
 			b=1;
@@ -752,7 +752,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		int8_t err;
 		const posn_t posn=getposn(eid,&err);
 		if(err){
-			fprintf(stderr,"WARNING: entity %hu has no position\n",eid);
+			fprintf(stderr,"WARNING: entity %u has no position\n",eid);
 			continue;
 		}
 		const arr_t arr={
@@ -784,8 +784,6 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		p2d_t dcp;
 		glfwGetCursorPos(win,&dcp.x,&dcp.y);
 		dcp=win_glfw2ndc(dcp);
-		const float sh=scrnhght;
-		const float hfsh=sh/2;
 		const float cx=dcp.x;
 		const float cy=dcp.y;
 		const float angl=atan2f(cy-y,cx-x);
@@ -856,10 +854,10 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		if(!t){
 			continue;
 		}
-		const uint16_t eid=i->eid;
+		const uint32_t eid=i->eid;
 		const dim_t*const dim=getent(&dims,eid);
 		if(!dim){
-			fprintf(stderr,"WARNING: entity %hu has no dimensions\n",eid);
+			fprintf(stderr,"WARNING: entity %u has no dimensions\n",eid);
 			continue;
 		}
 		int8_t err;
@@ -867,7 +865,7 @@ void grphcs_draw(GLFWwindow*const __restrict win){
 		if(err){
 			const scrnpos_t*const pos=getent(&scrnposes,eid);
 			if(!pos){
-				fprintf(stderr,"WARNING: entity %hu has no position\n",eid);
+				fprintf(stderr,"WARNING: entity %u has no position\n",eid);
 				continue;
 			}
 			const uiel_t uiel={
@@ -1241,9 +1239,11 @@ static int32_t buildshad(const char*const __restrict vs,const char*const __restr
 	glDeleteShader(frag);
 	return prog;
 }
-static int32_t compshad(const uint32_t prog,const uint32_t type,const char*const __restrict fn){
+static int32_t
+compshad(const uint32_t prog,const uint32_t type,const char*const __restrict fn){
 	const int32_t shad=glCreateShader(type);
-	//Windows and Linux don't agree on what constitues a text file, so they don't get to decide.
+	//Windows and Linux don't agree on what constitues a text file,
+	//so they don't get to decide.
 	FILE*const __restrict file=fopen(fn,"rb");
 	if(!file){
 		fprintf(stderr,"ERROR: failed to open %s\n",fn);
@@ -1253,7 +1253,7 @@ static int32_t compshad(const uint32_t prog,const uint32_t type,const char*const
 	const uint64_t len=ftell(file);
 	fseek(file,0,SEEK_SET);
 	char code[len+1];
-	fread(code,1,len,file);
+	(void)fread(code,1,len,file);
 	fclose(file);
 	code[len]=0;
 	const char*const c=code;

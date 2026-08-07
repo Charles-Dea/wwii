@@ -71,19 +71,19 @@ typedef union{
 	frarm_t frarm;
 	explsv_t explsv;
 }wpn_t;
-extern uint16_t unit_sel;
+extern uint32_t unit_sel;
 extern bool unit_allied;
 extern bool unit_pltrn;
-extern uint16_t unit_panel;
+extern uint32_t unit_panel;
 extern arrlst_t unit_chrs;
 extern arrlst_t unit_aoes;
 extern const wpn_t unit_wpns[];
 int8_t mkunit(float,float,bool,uint8_t);
 void unit_chklos();
-int8_t unit_move(uint16_t,float,float);
-int8_t unit_fire(uint16_t);
-int8_t unit_shell(uint16_t,float,float);
-int8_t unit_deselct(uint16_t);
+int8_t unit_move(uint32_t,float,float);
+int8_t unit_fire(uint32_t);
+int8_t unit_shell(uint32_t,float,float);
+int8_t unit_deselct(uint32_t);
 int8_t unit_nxtrn(bool);
 void unit_chmrl(udata_t*,double);
 #endif

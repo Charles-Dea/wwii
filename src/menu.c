@@ -12,12 +12,12 @@
 #include"win.h"
 #include"menu.h"
 uint8_t menu_scene=SCENE_MAINMEN;
-uint16_t menu_nxtrn;
+uint32_t menu_nxtrn;
 static int8_t chsd();
 static int8_t enterip();
 static void deltxtbox(const txtbox_t*);
-static int8_t seltxtbox(uint16_t);
-static int8_t desltxtbox(uint16_t);
+static int8_t seltxtbox(uint32_t);
+static int8_t desltxtbox(uint32_t);
 static void mkbutton(float,float,float,float,float,uint64_t,int8_t(*)(int64_t),int64_t);
 static int8_t waiting(bool);
 static void mkhedge(float,float,float,float,float);
@@ -83,7 +83,7 @@ void menu_strtgm(){
 	mkhedge(0,1.5,5,1.7,.065);
 	mkflag(0,2.75,1.5,1);
 	mkflag(0,-2.75,1.5,0);
-	const uint16_t nxtrn=neweid;
+	const uint32_t nxtrn=neweid;
 	const scrnpos_t pos={
 		.eid=nxtrn,
 		.x=-.1,
@@ -109,7 +109,7 @@ void menu_strtgm(){
 		.param=unit_allied,
 	};
 	arrlst_add(&clkbls,&clkbl);
-	const uint16_t panl=nxtrn+1;
+	const uint32_t panl=nxtrn+1;
 	const scrnpos_t ppos={
 		.eid=panl,
 		.z=1,
@@ -209,7 +209,7 @@ static int8_t enterip(){
 		.chrs={
 			.buf=malloc(32),
 			.bs=32,
-			.es=2
+			.es=4
 		},
 		.acs=malloc(128),
 		.func=net_join,
@@ -260,14 +260,14 @@ static int8_t enterip(){
 }
 static void deltxtbox(const txtbox_t*const tb){
 	free(tb->str.buf);
-	const uint16_t*const chrs=tb->chrs.buf;
-	for(const uint16_t*i=chrs,*const end=i+tb->chrs.nels;i<end;i++){
+	const uint32_t*const chrs=tb->chrs.buf;
+	for(const uint32_t*i=chrs,*const end=i+tb->chrs.nels;i<end;i++){
 		delent(*i);
 	}
 	free((void*)chrs);
 	free(tb->acs);
 }
-static int8_t seltxtbox(const uint16_t eid){
+static int8_t seltxtbox(const uint32_t eid){
 	win_seltxtbox=eid;
 	win_clkoff=(int8_t(*)(int64_t,float,float))desltxtbox;
 	win_clkoffparam=eid;
@@ -277,26 +277,26 @@ static int8_t seltxtbox(const uint16_t eid){
 		if(c){
 			c->a=1;
 		}else{
-			fprintf(stderr,"WARNING: entity %hu has no color\n",t->crsr);
+			fprintf(stderr,"WARNING: entity %u has no color\n",t->crsr);
 		}
 	}else{
-		fprintf(stderr,"ERROR: entity %hu has no txtbox\n",eid);
+		fprintf(stderr,"ERROR: entity %u has no txtbox\n",eid);
 	}
 	return E_SUCC;
 }
-static int8_t desltxtbox(const uint16_t eid){
+static int8_t desltxtbox(const uint32_t eid){
 	win_seltxtbox=0;
 	win_clkoff=NULL;
 	const txtbox_t*const t=getent(&txtboxes,eid);
 	if(!t){
-		fprintf(stderr,"ERROR: entity %hu has no txtbox\n",eid);
+		fprintf(stderr,"ERROR: entity %u has no txtbox\n",eid);
 		return E_NO_ENT;
 	}
 	col_t*const c=getent(&cols,t->crsr);
 	if(c){
 		c->a=0;
 	}else{
-		fprintf(stderr,"WARNING: entity %hu has no color\n",t->crsr);
+		fprintf(stderr,"WARNING: entity %u has no color\n",t->crsr);
 	}
 	return E_SUCC;
 }
@@ -310,7 +310,7 @@ static void mkbutton(
 		int8_t(*const func)(int64_t),
 		const int64_t param
 		){
-	const uint16_t eid=neweid;
+	const uint32_t eid=neweid;
 	const pos_t pos={
 		.eid=eid,
 		.x=x,
@@ -348,28 +348,13 @@ static int8_t waiting(const bool allied){
 	reqcptr=allied?1:2;
 	termscene();
 	mksprt(0,0,2,.5,TEX_WTNG);
-	/*const pos_t pos={
-		.eid=1,
-	};
-	arrlst_add(&poses,&pos);
-	const dim_t dim={
-		.eid=1,
-		.w=2,
-		.h=.5,
-	};
-	arrlst_add(&dims,&dim);
-	const tex_t tex={
-		.eid=1,
-		.tex=TEX_WTNG,
-	};
-	arrlst_add(&texes,&tex);*/
 	menu_scene=SCENE_WTNG;
 	unit_pltrn=1;
 	return E_SUCC;
 }
 static void
 mkhedge(const float x0,const float y0,const float x1,const float y1,const float w){
-	const uint16_t eid=neweid;
+	const uint32_t eid=neweid;
 	const hedge_t hedge={
 		.eid=eid,
 	};
@@ -395,7 +380,7 @@ mkhedge(const float x0,const float y0,const float x1,const float y1,const float 
 }
 static void
 mksprt(const float x,const float y,const float w,const float h,const uint64_t t){
-	const uint16_t eid=neweid;
+	const uint32_t eid=neweid;
 	const pos_t pos={
 		.eid=eid,
 		.x=x,

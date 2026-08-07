@@ -18,7 +18,7 @@
 #include"win.h"
 #define SBS 8
 double scrnwdth,scrnhght;
-uint16_t neweid=1;
+uint32_t neweid=1;
 bool running=1;
 uint8_t reqcptr;
 arrlst_t poses={
@@ -147,7 +147,7 @@ int main(){
 	grphcs_term();
 	win_close(win);
 }
-posn_t getposn(const uint16_t eid,int8_t*const __restrict err){
+posn_t getposn(const uint32_t eid,int8_t*const __restrict err){
 	const pos_t*const pos=getent(&poses,eid);
 	if(pos){
 		const posn_t posn={
@@ -189,7 +189,7 @@ posn_t getposn(const uint16_t eid,int8_t*const __restrict err){
 	return posn;
 }
 void termscene(){
-	for(uint16_t i=neweid-1;i;i--){
+	for(uint32_t i=neweid-1;i;i--){
 		delent(i);
 	}
 	for(arrlst_t*const*i=comps,*const*const __restrict end=comps+sizeof(comps)/8;i<end;i++)
@@ -212,7 +212,7 @@ void termscene(){
 	grphcs_zoom=1;
 	menu_nxtrn=0;
 }
-void delent(const uint16_t eid){
+void delent(const uint32_t eid){
 	arrlst_t*const*i=comps;
 	arrlst_t*const*const __restrict end=i+sizeof(comps)/8;
 	for(;i<end;i++){
@@ -228,37 +228,22 @@ void delent(const uint16_t eid){
 		}
 	}
 }
-void*getent(const arrlst_t*const arr,const uint16_t eid){
-	const void*ents=arr->buf;
-	const uint64_t es=arr->es;
-	const uint64_t nels=arr->nels;
-	for(int64_t low=0,high=nels-1;low<=high&&~low&0x8000000000000000&&high<nels;){
-		const uint64_t mid=(low+high)/2;
-		const uint16_t*const ent=ents+mid*es;
-		const int16_t diff=*ent-eid;
-		if(!diff){
-			return(void*)ent;
-		}
-		if(diff&0x8000){
-			low=mid+1;
-		}else{
-			high=mid-1;
-		}
-	}
-	return NULL;
+void*getent(const arrlst_t*const arr,const uint32_t eid){
+	const uint64_t idx=getenti(arr,eid);
+	return idx==UINT64_MAX?NULL:arr->buf+idx*arr->es;
 }
-uint64_t getenti(const arrlst_t*const arr,const uint16_t eid){
+uint64_t getenti(const arrlst_t*const arr,const uint32_t eid){
 	const void*ents=arr->buf;
 	const uint64_t es=arr->es;
 	const uint64_t nels=arr->nels;
-	for(int64_t low=0,high=nels-1;low<=high&&~low&0x8000000000000000&&high<=nels;){
+	for(int64_t low=0,high=nels-1;low<=high&&low>=0&&high<nels;){
 		const uint64_t mid=(low+high)/2;
-		const uint16_t*const ent=ents+mid*es;
-		const int16_t diff=*ent-eid;
+		const uint32_t*const ent=ents+mid*es;
+		const int32_t diff=*ent-eid;
 		if(!diff){
 			return mid;
 		}
-		if(diff&0x8000){
+		if(diff<0){
 			low=mid+1;
 		}else{
 			high=mid-1;

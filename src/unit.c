@@ -16,15 +16,15 @@
 #define GRNDMNRNG .004
 #define FRGCVR .5
 #define HECVR .7
-uint16_t unit_sel;
+uint32_t unit_sel;
 bool unit_allied;
 bool unit_pltrn;
-uint16_t unit_panel;
+uint32_t unit_panel;
 arrlst_t unit_chrs={
-	.es=2,
+	.es=4,
 };
 arrlst_t unit_aoes={
-	.es=2,
+	.es=4,
 };
 const wpn_t unit_wpns[]={
 	{
@@ -203,8 +203,8 @@ static const char*const rnames[]={
 	"Gunner",
 	"Assistant Gunner",
 };
-static int8_t tglsel(uint16_t);
-static int8_t selct(uint16_t);
+static int8_t tglsel(uint32_t);
+static int8_t selct(uint32_t);
 static float rndrstr(const char*,float,float);
 static int8_t setinvistex(const udata_t*,bool);
 static void
@@ -217,7 +217,7 @@ static void dmg(udata_t*,uint8_t,double);
 static void delunit(const udata_t*);
 static uint64_t ret(int64_t);
 int8_t mkunit(const float x,const float y,const bool allied,const uint8_t type){
-	const uint16_t eid=neweid;
+	const uint32_t eid=neweid;
 	const pos_t pos={
 		.eid=eid,
 		.x=x,
@@ -586,41 +586,40 @@ void unit_chklos(){
 		int8_t err;
 		const posn_t posn=getposn((*i)->eid,&err);
 		if(err){
-			fprintf(stderr,"WARNING: entity %hu has no position\n",(*i)->eid);
+			fprintf(stderr,"WARNING: entity %u has no position\n",(*i)->eid);
 			continue;
 		}
 		vsblto(posn,enmy.buf,enmy.nels,&vsbl);
 	}
-	const uint64_t utex=ald?TEX_AXISINF:TEX_ALLIEDINF;
 	for(udata_t*const*i=enmy.buf,*const*const __restrict end=i+enmy.nels;i<end;i++){
 		udata_t*const u=*i;
-		const uint16_t eid=u->eid;
+		const uint32_t eid=u->eid;
 		if(hshmp_in(&vsbl,eid)){
 			u->flags|=UFLAGS_VIS;
 			tex_t*const t=getent(&texes,eid);
 			if(t){
 				t->tex=getex(u);
 			}else{
-				fprintf(stderr,"WARNING: entity %hu has no texture\n",eid);
+				fprintf(stderr,"WARNING: entity %u has no texture\n",eid);
 			}
 			const uint64_t nsldrs=u->sldrs.nels;
 			tex_t*const t1=getent(&texes,u->sprt1);
 			if(t1){
 				t1->tex=nsldrs/10+TEX_0;
 			}else{
-				fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt1);
+				fprintf(stderr,"WARNING: entity %u has no texture\n",u->sprt1);
 			}
 			tex_t*const t0=getent(&texes,u->sprt0);
 			if(t0){
 				t0->tex=nsldrs%10+TEX_0;
 			}else{
-				fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt0);
+				fprintf(stderr,"WARNING: entity %u has no texture\n",u->sprt0);
 			}
 			clkbl_t*const clkbl=getent(&clkbls,eid);
 			if(clkbl){
 				clkbl->hdn=0;
 			}else{
-				fprintf(stderr,"WARNING: entity %hu has no clkbl\n",eid);
+				fprintf(stderr,"WARNING: entity %u has no clkbl\n",eid);
 			}
 		}else{
 			u->flags&=~UFLAGS_VIS;
@@ -628,41 +627,41 @@ void unit_chklos(){
 			if(t){
 				t->tex=TEX_NULL;
 			}else{
-				fprintf(stderr,"WARNING: entity %hu has no texture\n",eid);
+				fprintf(stderr,"WARNING: entity %u has no texture\n",eid);
 			}
 			tex_t*const t1=getent(&texes,u->sprt1);
 			if(t1){
 				t1->tex=TEX_NULL;
 			}else{
-				fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt1);
+				fprintf(stderr,"WARNING: entity %u has no texture\n",u->sprt1);
 			}
 			tex_t*const t0=getent(&texes,u->sprt0);
 			if(t0){
 				t0->tex=TEX_NULL;
 			}else{
-				fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt0);
+				fprintf(stderr,"WARNING: entity %u has no texture\n",u->sprt0);
 			}
 			clkbl_t*const clkbl=getent(&clkbls,eid);
 			if(clkbl){
 				clkbl->hdn=1;
 			}else{
-				fprintf(stderr,"WARNING: entity %hu has no clkbl\n",eid);
+				fprintf(stderr,"WARNING: entity %u has no clkbl\n",eid);
 			}
 		}
 	}
 }
-int8_t unit_move(const uint16_t eid,const float x,const float y){
+int8_t unit_move(const uint32_t eid,const float x,const float y){
 	if(win_frftbtn){
 		return E_SUCC;
 	}
 	pos_t*const p=getent(&poses,eid);
 	if(!p){
-		fprintf(stderr,"ERROR: entity %hu has no position\n",eid);
+		fprintf(stderr,"ERROR: entity %u has no position\n",eid);
 		return E_NO_ENT;
 	}
 	udata_t*const u=getent(&udatas,eid);
 	if(!u){
-		fprintf(stderr,"ERROR: entity %hu has no udata\n",eid);
+		fprintf(stderr,"ERROR: entity %u has no udata\n",eid);
 		return E_NO_ENT;
 	}
 	const float dx=x-p->x;
@@ -676,7 +675,7 @@ int8_t unit_move(const uint16_t eid,const float x,const float y){
 	if(err){
 		fprintf(
 			stderr,
-			"WARNING: failed to deselect entity %hu with error code %hhu\n",
+			"WARNING: failed to deselect entity %u with error code %hhu\n",
 			eid,
 			err
 		);
@@ -687,28 +686,28 @@ int8_t unit_move(const uint16_t eid,const float x,const float y){
 	if(t){
 		t->tex=getex(u);
 	}else{
-		fprintf(stderr,"WARNING: entity %hu has no texture\n",eid);
+		fprintf(stderr,"WARNING: entity %u has no texture\n",eid);
 	}
 	net_move(eid,x,y);
 	unit_chklos();
 	return E_SUCC;
 }
-int8_t unit_fire(const uint16_t trgt){
+int8_t unit_fire(const uint32_t trgt){
 	if(win_frftbtn){
 		return E_SUCC;
 	}
-	const uint16_t shtr=unit_sel;
+	const uint32_t shtr=unit_sel;
 	if(!shtr){
 		return E_SUCC;
 	}
 	udata_t*const su=getent(&udatas,shtr);
 	if(!su){
-		fprintf(stderr,"ERROR: entity %hu has no udata\n",shtr);
+		fprintf(stderr,"ERROR: entity %u has no udata\n",shtr);
 		return E_NO_ENT;
 	}
 	udata_t*const tu=getent(&udatas,trgt);
 	if(!tu){
-		fprintf(stderr,"ERROR: entity %hu has no udata\n",trgt);
+		fprintf(stderr,"ERROR: entity %u has no udata\n",trgt);
 		return E_NO_ENT;
 	}
 	const int8_t sflags=su->flags|UFLAGS_ACTED;
@@ -785,7 +784,7 @@ int8_t unit_fire(const uint16_t trgt){
 			switch(w->base.type){
 				case WT_FRARM:
 					const double a=w->frarm.acc*smrl*((double)1-dor*dor)*frarmcvr*prof;
-					const uint16_t r=w->base.rpm;
+					const uint32_t r=w->base.rpm;
 					e=a*r;
 					break;
 				case WT_EXPLSV:
@@ -850,30 +849,30 @@ int8_t unit_fire(const uint16_t trgt){
 	if(!fired){
 		return E_SUCC;
 	}
+	tex_t*const t=getent(&texes,shtr);
+	if(t){
+		t->tex=getex(su);
+	}else{
+		fprintf(stderr,"WARNING: entity %u has no texture\n",shtr);
+	}
 	dmg(tu,hits,mrlchng);
 	err=unit_deselct(shtr);
 	if(err){
 		fprintf(
 			stderr,
-			"ERROR: failed to deselect entity %hu with error code %hhd\n",
+			"ERROR: failed to deselect entity %u with error code %hhd\n",
 			shtr,
 			err
 		);
 		return err;
 	}
-	tex_t*const t=getent(&texes,shtr);
-	if(t){
-		t->tex=getex(su);
-	}else{
-		fprintf(stderr,"WARNING: entity %hu has no texture\n",shtr);
-	}
 	return E_SUCC;
 }
-int8_t unit_shell(const uint16_t eid,const float x,const float y){
+int8_t unit_shell(const uint32_t eid,const float x,const float y){
 	int8_t err;
 	const posn_t posn=getposn(eid,&err);
 	if(err){
-		fprintf(stderr,"ERROR: entity %hu has no position\n",eid);
+		fprintf(stderr,"ERROR: entity %u has no position\n",eid);
 		return E_NO_ENT;
 	}
 	const float dx=x-posn.x;
@@ -881,7 +880,7 @@ int8_t unit_shell(const uint16_t eid,const float x,const float y){
 	const float d=sqrtf(dx*dx+dy*dy);
 	udata_t*const u=getent(&udatas,eid);
 	if(!u){
-		fprintf(stderr,"ERROR: entity %hu has no udata\n",eid);
+		fprintf(stderr,"ERROR: entity %u has no udata\n",eid);
 		return E_NO_ENT;
 	}
 	bool fired=0;
@@ -927,7 +926,7 @@ int8_t unit_nxtrn(const bool ald){
 					if(tex){
 						tex->tex=getex(i);
 					}else{
-						fprintf(stderr,"WARNING: entity %hu has no texture\n",i->eid);
+						fprintf(stderr,"WARNING: entity %u has no texture\n",i->eid);
 						continue;
 					}
 				}
@@ -944,22 +943,22 @@ int8_t unit_nxtrn(const bool ald){
 	if(tex){
 		tex->tex=t;
 	}else{
-		fprintf(stderr,"WARNING: entity %hu has no texture\n",menu_nxtrn);
+		fprintf(stderr,"WARNING: entity %u has no texture\n",menu_nxtrn);
 	}
 	return E_SUCC;
 }
-int8_t unit_deselct(const uint16_t eid){
+int8_t unit_deselct(const uint32_t eid){
 	if(win_frftbtn){
 		return E_SUCC;
 	}
 	tex_t*const t=getent(&texes,eid);
 	if(!t){
-		fprintf(stderr,"ERROR: entity %hu has no texture\n",eid);
+		fprintf(stderr,"ERROR: entity %u has no texture\n",eid);
 		return E_NO_ENT;
 	}
 	udata_t*const u=getent(&udatas,eid);
 	if(!u){
-		fprintf(stderr,"ERROR entity %hu has no udata\n",eid);
+		fprintf(stderr,"ERROR entity %u has no udata\n",eid);
 		return E_NO_ENT;
 	}
 	const int8_t flags=u->flags&~UFLAGS_SEL;
@@ -969,16 +968,16 @@ int8_t unit_deselct(const uint16_t eid){
 	if(pcol){
 		pcol->a=0;
 	}else{
-		fprintf(stderr,"WARNING: entity %hu has no color\n",unit_panel);
+		fprintf(stderr,"WARNING: entity %u has no color\n",unit_panel);
 	}
 	col_t*const mvrcol=getent(&cols,u->mvr);
 	if(mvrcol){
 		mvrcol->a=0;
 	}else{
-		fprintf(stderr,"WARNING: entity %hu has no color\n",u->mvr);
+		fprintf(stderr,"WARNING: entity %u has no color\n",u->mvr);
 	}
-	const uint16_t*const rngs=u->rngs;
-	for(const uint16_t*i=rngs,*const __restrict end=i+u->nrngs;i<end;i++){
+	const uint32_t*const rngs=u->rngs;
+	for(const uint32_t*i=rngs,*const __restrict end=i+u->nrngs;i<end;i++){
 		delent(*i);
 	}
 	free((void*)rngs);
@@ -988,17 +987,17 @@ int8_t unit_deselct(const uint16_t eid){
 	if(arrcol){
 		arrcol->a=0;
 	}else{
-		fprintf(stderr,"WARNING: entity %hu has no color\n",u->arr);
+		fprintf(stderr,"WARNING: entity %u has no color\n",u->arr);
 	}
 	setinvistex(u,0);
-	for(const uint16_t*i=unit_chrs.buf,*const __restrict end=i+unit_chrs.nels;i<end;i++){
+	for(const uint32_t*i=unit_chrs.buf,*const __restrict end=i+unit_chrs.nels;i<end;i++){
 		delent(*i);
 	}
 	unit_chrs.nels=0;
 	const uint64_t naoes=unit_aoes.nels;
 	if(naoes){
-		const uint16_t*const aoeb=unit_aoes.buf;
-		for(const uint16_t*i=aoeb,*const __restrict end=aoeb+naoes;i<end;i++){
+		const uint32_t*const aoeb=unit_aoes.buf;
+		for(const uint32_t*i=aoeb,*const __restrict end=aoeb+naoes;i<end;i++){
 			delent(*i);
 		}
 		free((void*)aoeb);
@@ -1022,16 +1021,16 @@ void unit_chmrl(udata_t*const u,const double mrld){
 	if(r){
 		r->r=u->spd*mrl;
 	}else{
-		fprintf(stderr,"WARNING: entity %hu has no radius\n",u->mvr);
+		fprintf(stderr,"WARNING: entity %u has no radius\n",u->mvr);
 	}
 }
-static int8_t tglsel(const uint16_t eid){
+static int8_t tglsel(const uint32_t eid){
 	if(win_frftbtn){
 		return E_SUCC;
 	}
 	const udata_t*const u=getent(&udatas,eid);
 	if(!u){
-		fprintf(stderr,"ERROR: entity %hu has no udata\n",eid);
+		fprintf(stderr,"ERROR: entity %u has no udata\n",eid);
 		return E_NO_ENT;
 	}
 	if(u->flags&UFLAGS_SEL){
@@ -1039,7 +1038,7 @@ static int8_t tglsel(const uint16_t eid){
 	}
 	return selct(eid);
 }
-static int8_t selct(const uint16_t eid){
+static int8_t selct(const uint32_t eid){
 	if(unit_sel){
 		unit_deselct(unit_sel);
 	}
@@ -1048,7 +1047,7 @@ static int8_t selct(const uint16_t eid){
 	}
 	udata_t*const u=getent(&udatas,eid);
 	if(!u){
-		fprintf(stderr,"ERROR entity %hu has no udata\n",eid);
+		fprintf(stderr,"ERROR entity %u has no udata\n",eid);
 		return E_NO_ENT;
 	}
 	const int8_t flags=u->flags|UFLAGS_SEL;
@@ -1060,9 +1059,9 @@ static int8_t selct(const uint16_t eid){
 	if(t){
 		t->tex=getex(u);
 	}else{
-		fprintf(stderr,"WARNING: entity %hu has no texture\n",eid);
+		fprintf(stderr,"WARNING: entity %u has no texture\n",eid);
 	}
-	const uint16_t panl=unit_panel;
+	const uint32_t panl=unit_panel;
 	dim_t*const pdim=getent(&dims,panl);
 	const sldr_t*const sldrs=u->sldrs.buf;
 	const uint64_t nsldrs=u->sldrs.nels;
@@ -1082,13 +1081,13 @@ static int8_t selct(const uint16_t eid){
 		pdim->w=(float)longest*PNLCHRHGHT;
 		pdim->h=(float)nsldrs*PNLCHRHGHT*2;
 	}else{
-		fprintf(stderr,"WARNING: entity %hu has no dimensions\n",panl);
+		fprintf(stderr,"WARNING: entity %u has no dimensions\n",panl);
 	}
 	col_t*const pcol=getent(&cols,panl);
 	if(pcol){
 		pcol->a=1;
 	}else{
-		fprintf(stderr,"WARNING: entity %hu has no color\n",panl);
+		fprintf(stderr,"WARNING: entity %u has no color\n",panl);
 	}
 	float y=((float)nsldrs-1)*PNLCHRHGHT+PNLCHRHGHT/2;
 	for(const sldr_t*si=sldrs;si<send;si++){
@@ -1106,7 +1105,7 @@ static int8_t selct(const uint16_t eid){
 	if(col){
 		col->a=1;
 	}else{
-		fprintf(stderr,"WARNING: entity %hu has no color\n",u->mvr);
+		fprintf(stderr,"WARNING: entity %u has no color\n",u->mvr);
 	}
 	lnklst_t*map[8]={};
 	const hshmp_t rngst={
@@ -1126,11 +1125,11 @@ static int8_t selct(const uint16_t eid){
 		}
 	}
 	arrlst_t rngs={
-		.buf=malloc(16),
+		.buf=malloc(32),
 		.bs=16,
-		.es=2,
+		.es=4,
 	};
-	uint16_t neid=neweid;
+	uint32_t neid=neweid;
 	for(lnklst_t*const*mi=map,*const*const __restrict mend=mi+sizeof(map)/8;mi<mend;mi++){
 		for(const lnklst_t*li=*mi;li;li=li->nxt){
 			const relpos_t pos={
@@ -1169,7 +1168,7 @@ static int8_t selct(const uint16_t eid){
 	return E_SUCC;
 }
 static float rndrstr(const char*str,float x,const float y){
-	uint16_t eid=neweid;
+	uint32_t eid=neweid;
 	for(char c;(c=*str);str++){
 		if(c==' '){
 			x+=PNLCHRHGHT/2;
@@ -1208,7 +1207,7 @@ static int8_t setinvistex(const udata_t*const u,const bool shade){
 	int8_t err;
 	const posn_t posn=getposn(u->eid,&err);
 	if(err){
-		fprintf(stderr,"ERROR: entity %hu has no position\n",u->eid);
+		fprintf(stderr,"ERROR: entity %u has no position\n",u->eid);
 		return err;
 	}
 	arrlst_t enmies={
@@ -1235,14 +1234,14 @@ static int8_t setinvistex(const udata_t*const u,const bool shade){
 			i++
 			){
 		const udata_t*const u=*i;
-		const uint16_t eid=u->eid;
+		const uint32_t eid=u->eid;
 		const int8_t flags=u->flags;
-		if(u->flags&UFLAGS_VIS&&!hshmp_in(&vsbl,eid)){
+		if(flags&UFLAGS_VIS&&!hshmp_in(&vsbl,eid)){
 			tex_t*const tex=getent(&texes,eid);
 			if(tex){
 				tex->tex=getex(u)+(TEX_AXISINFACTD-TEX_AXISINF)*shade;
 			}else{
-				fprintf(stderr,"WARNING: entity %hu has no texture\n",eid);
+				fprintf(stderr,"WARNING: entity %u has no texture\n",eid);
 			}
 		}
 	}
@@ -1262,11 +1261,11 @@ static void vsblto(
 	};
 	inhdgs(&hdgs,ep);
 	for(const udata_t*const*i=frndls,*const*const __restrict end=i+nf;i<end;i++){
-		const uint16_t eid=(*i)->eid;
+		const uint32_t eid=(*i)->eid;
 		int8_t err;
 		const posn_t fp=getposn(eid,&err);
 		if(err){
-			fprintf(stderr,"WARNING: entity %hu has no position\n",eid);
+			fprintf(stderr,"WARNING: entity %u has no position\n",eid);
 			continue;
 		}
 		const hshmp_t nh=cpyhshmp(&hdgs);
@@ -1288,10 +1287,10 @@ static bool los(const posn_t sp,const posn_t tp,const hshmp_t*const __restrict h
 			bot=sp.y;
 		}
 		for(const hedge_t*i=hedges.buf,*const __restrict end=i+hedges.nels;i<end;i++){
-			const uint16_t h=i->eid;
+			const uint32_t h=i->eid;
 			const line_t*const ln=getent(&lines,h);
 			if(!ln){
-				fprintf(stderr,"WANRING: entity %hu has no line\n",h);
+				fprintf(stderr,"WANRING: entity %u has no line\n",h);
 				continue;
 			}
 			if(ln->x0==sp.x&&ln->x1==sp.x){
@@ -1315,13 +1314,13 @@ static bool los(const posn_t sp,const posn_t tp,const hshmp_t*const __restrict h
 			stlft=sp.x;
 		}
 		for(const hedge_t*i=hedges.buf,*const __restrict end=i+hedges.nels;i<end;i++){
-			const uint16_t h=i->eid;
+			const uint32_t h=i->eid;
 			if(hshmp_in(hdgs,h)){
 				continue;
 			}
 			const line_t*const ln=getent(&lines,h);
 			if(!ln){
-				fprintf(stderr,"WARNING: entity %hu has no line\n",h);
+				fprintf(stderr,"WARNING: entity %u has no line\n",h);
 				continue;
 			}
 			const float x0=ln->x0;
@@ -1353,10 +1352,10 @@ static bool los(const posn_t sp,const posn_t tp,const hshmp_t*const __restrict h
 }
 static void inhdgs(const hshmp_t*const __restrict hdgs,const posn_t up){
 	for(const hedge_t*i=hedges.buf,*const __restrict end=i+hedges.nels;i<end;i++){
-		const uint16_t h=i->eid;
+		const uint32_t h=i->eid;
 		const line_t*const l=getent(&lines,h);
 		if(!l){
-			fprintf(stderr,"WARNING: entity %hu has no line\n",i->eid);
+			fprintf(stderr,"WARNING: entity %u has no line\n",i->eid);
 			continue;
 		}
 		const float x1=l->x1;
@@ -1406,7 +1405,7 @@ static void hitpos(
 	uint8_t dmgs[nunits]={};
 	double mrlchngs[nunits]={};
 	udata_t*const units=udatas.buf;
-	for(uint16_t _=wpn->base.rpm;_;_--){
+	for(uint32_t _=wpn->base.rpm;_;_--){
 		const double dist=wpn->explsv.sprd*wtotd/wpn->base.rng*rand()/(float)RAND_MAX;
 		const double angl=(float)RAND_MAX*rand()/(2.0*M_PI);
 		const double ex=tx+cos(angl)*dist;
@@ -1421,7 +1420,7 @@ static void hitpos(
 			int8_t err;
 			const posn_t up=getposn(ui->eid,&err);
 			if(err){
-				fprintf(stderr,"WARNING: entity %hu has no posistion\n",ui->eid);
+				fprintf(stderr,"WARNING: entity %u has no posistion\n",ui->eid);
 				continue;
 			}
 			const double udx=up.x-ex;
@@ -1438,8 +1437,6 @@ static void hitpos(
 				.map=map,
 				.nbkts=8,
 				.hshfnc=ret,
-			};
-			const posn_t posn={
 			};
 			inhdgs(&hdgs,up);
 			double fragcvr,hecvr;
@@ -1470,7 +1467,7 @@ static void hitpos(
 static void dmg(udata_t*const u,const uint8_t hits,double mrlchng){
 	if(hits){
 		if(hits>=u->sldrs.nels){
-			const uint16_t eid=u->eid;
+			const uint32_t eid=u->eid;
 			delent(eid);
 			net_dstr(eid);
 		}else{
@@ -1488,13 +1485,13 @@ static void dmg(udata_t*const u,const uint8_t hits,double mrlchng){
 				if(tex1){
 					tex1->tex=nsldrs/10+TEX_0;
 				}else{
-					fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt1);
+					fprintf(stderr,"WARNING: entity %u has no texture\n",u->sprt1);
 				}
 				tex_t*const tex0=getent(&texes,u->sprt0);
 				if(tex0){
 					tex0->tex=nsldrs%10+TEX_0;
 				}else{
-					fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt0);
+					fprintf(stderr,"WARNING: entity %u has no texture\n",u->sprt0);
 				}
 			}
 			mrlchng-=hits*.1;
@@ -1508,9 +1505,9 @@ static void delunit(const udata_t*const u){
 	delent(u->mvr);
 	delent(u->sprt1);
 	delent(u->sprt0);
-	const uint16_t*rngs=u->rngs;
+	const uint32_t*rngs=u->rngs;
 	if(rngs){
-		for(const uint16_t*i=rngs,*const __restrict end=rngs+u->nrngs;i<end;i++){
+		for(const uint32_t*i=rngs,*const __restrict end=rngs+u->nrngs;i<end;i++){
 			delent(*i);
 		}
 		free((void*)rngs);
@@ -1521,14 +1518,15 @@ static void delunit(const udata_t*const u){
 	}
 	free((void*)sldrs);
 	if(u->eid==unit_sel){
-		for(const uint16_t*i=unit_chrs.buf,*const __restrict end=i+unit_chrs.nels;i<end;i++){
+		for(const uint32_t*i=unit_chrs.buf,*const __restrict end=i+unit_chrs.nels;i<end;i++)
+		{
 			delent(*i);
 		}
 		col_t*const col=getent(&cols,unit_panel);
 		if(col){
 			col->a=0;
 		}else{
-			fprintf(stderr,"WARNING: entity %hu has no color\n",unit_panel);
+			fprintf(stderr,"WARNING: entity %u has no color\n",unit_panel);
 		}
 	}
 }

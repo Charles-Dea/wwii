@@ -23,14 +23,14 @@ enum{
 };
 typedef struct{
 	uint8_t type;
-	int8_t pad;
-	uint16_t eid;
+	int8_t pad[3];
+	uint32_t eid;
 	float x,y;
 }mvordr_t;
 typedef struct{
 	uint8_t type;
-	int8_t pad;
-	uint16_t eid;
+	int8_t pad[3];
+	uint32_t eid;
 }dstr_t;
 static ENetHost*host;
 static ENetPeer*peer;
@@ -112,7 +112,7 @@ void net_lstn(){
 						pos->y=move->y;
 						unit_chklos();
 					}else{
-						fprintf(stderr,"WARNING: entity %hu has no position\n",move->eid);
+						fprintf(stderr,"WARNING: entity %u has no position\n",move->eid);
 					}
 					break;
 				case PT_DSTR:
@@ -120,7 +120,7 @@ void net_lstn(){
 					unit_chklos();
 					break;
 				case PT_DMG:
-					udata_t*const u=getent(&udatas,*((uint16_t*)(data+2)));
+					udata_t*const u=getent(&udatas,*((uint32_t*)(data+4)));
 					if(u){
 						unit_chmrl(u,*((double*)(data+8)));
 						arrlst_t*const sldrs=&u->sldrs;
@@ -171,18 +171,18 @@ void net_lstn(){
 						if(tex1){
 							tex1->tex=nsldrs/10+TEX_0;
 						}else{
-							fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt1);
+							fprintf(stderr,"WARNING: entity %u has no texture\n",u->sprt1);
 						}
 						tex_t*const tex0=getent(&texes,u->sprt0);
 						if(tex0){
 							tex0->tex=nsldrs%10+TEX_0;
 						}else{
-							fprintf(stderr,"WARNING: entity %hu has no texture\n",u->sprt0);
+							fprintf(stderr,"WARNING: entity %u has no texture\n",u->sprt0);
 						}
 						const uint8_t ack=PT_ACK;
 						sndpkt(&ack,1);
 					}else{
-						fprintf(stderr,"WARNING: entity %hu has no udata\n",*((uint16_t*)(data+2)));
+						fprintf(stderr,"WARNING: entity %u has no udata\n",*((uint32_t*)(data+2)));
 					}
 					break;
 				case PT_ETRN:
@@ -208,7 +208,7 @@ void net_lstn(){
 	}
 	status=st;
 }
-void net_move(const uint16_t eid,const float x,const float y){
+void net_move(const uint32_t eid,const float x,const float y){
 	const mvordr_t move={
 		.type=PT_MOVE,
 		.eid=eid,
@@ -217,7 +217,7 @@ void net_move(const uint16_t eid,const float x,const float y){
 	};
 	sndpkt(&move,sizeof(mvordr_t));
 }
-void net_dstr(const uint16_t eid){
+void net_dstr(const uint32_t eid){
 	const dstr_t dstr={
 		.type=PT_DSTR,
 		.eid=eid,
@@ -225,7 +225,7 @@ void net_dstr(const uint16_t eid){
 	sndpkt(&dstr,sizeof(dstr_t));
 }
 int8_t net_dmg(
-		const uint16_t eid,
+		const uint32_t eid,
 		const uint64_t*const __restrict kld,
 		const uint64_t nkld,
 		const double mrlchng
@@ -234,7 +234,7 @@ int8_t net_dmg(
 	const uint64_t pktsz=kldsz+24;
 	int8_t pkt[pktsz];
 	pkt[0]=PT_DMG;
-	*((uint16_t*)(pkt+2))=eid;
+	*((uint32_t*)(pkt+4))=eid;
 	*((double*)(pkt+8))=mrlchng;
 	*((uint64_t*)(pkt+16))=nkld;
 	memcpy(pkt+24,kld,kldsz);

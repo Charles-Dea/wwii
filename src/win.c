@@ -12,16 +12,16 @@ int64_t win_clkoffparam;
 int8_t(*win_rclk)(int64_t,float,float);
 int64_t win_rclkparam;
 uint8_t win_inmode=INMODE_NORM;
-uint16_t win_seltxtbox;
-uint16_t win_frftbtn;
+uint32_t win_seltxtbox;
+uint32_t win_frftbtn;
 static void mousin(GLFWwindow*__restrict,int32_t,int32_t,int32_t);
 static p2d_t glfw2ndc(p2d_t);
 static p2d_t camadj(p2d_t);
 static void keyin(GLFWwindow*__restrict,int32_t,int32_t,int32_t,int32_t);
 static void scrollin(GLFWwindow*__restrict,double,double);
 static void hndlerr(int32_t,const char*__restrict);
-static void addchr(txtbox_t*,uint16_t,uint32_t,uint64_t,uint64_t);
-static int8_t exitmode(uint16_t);
+static void addchr(txtbox_t*,uint32_t,uint32_t,uint64_t,uint64_t);
+static int8_t exitmode(uint32_t);
 static int8_t fire(float,float);
 static int8_t endgm(bool);
 static uint64_t ret(int64_t);
@@ -77,7 +77,7 @@ static void mousin(
 					if(i->hdn){
 						continue;
 					}
-					const uint16_t eid=i->eid;
+					const uint32_t eid=i->eid;
 					int8_t err;
 					const posn_t p=getposn(eid,&err);
 					double x,y;
@@ -103,7 +103,7 @@ static void mousin(
 								default:
 									fprintf(
 										stderr,
-										"WARNING: entity %hu has invalid xanchor %hhu",
+										"WARNING: entity hu has invalid xanchor %hhu",
 										eid,
 										sp->xancr
 									);
@@ -122,7 +122,7 @@ static void mousin(
 								default:
 									fprintf(
 										stderr,
-										"WARNING: entity %hu has invalid yanchor %hhu",
+										"WARNING: entity %u has invalid yanchor %hhu",
 										eid,
 										sp->yancr
 									);
@@ -130,7 +130,7 @@ static void mousin(
 							}
 							msps=mp;
 						}else{
-							fprintf(stderr,"WARNING: entity %hu has no position",eid);
+							fprintf(stderr,"WARNING: entity %u has no position",eid);
 							continue;
 						}
 					}else{
@@ -144,7 +144,7 @@ static void mousin(
 					}
 					const dim_t*const d=getent(&dims,eid);
 					if(!d){
-						fprintf(stderr,"WARNING: entity %hu has no dimensions\n",eid);
+						fprintf(stderr,"WARNING: entity %u has no dimensions\n",eid);
 						continue;
 					}
 					const double hw=(double)d->w/2;
@@ -159,7 +159,7 @@ static void mousin(
 					if(err){
 						fprintf(
 							stderr,
-							"WARNING: func failed for clickable entity %hu with error code %hhd\n",
+							"WARNING: func failed for clickable entity %u with error code %hhd\n",
 							top->eid,
 							err
 						);
@@ -181,16 +181,16 @@ static void mousin(
 				if(i->hdn){
 					continue;
 				}
-				const uint16_t eid=i->eid;
+				const uint32_t eid=i->eid;
 				int8_t err;
 				const posn_t p=getposn(eid,&err);
 				if(err){
-					fprintf(stderr,"WARNING: entity %hu has no position\n",eid);
+					fprintf(stderr,"WARNING: entity %u has no position\n",eid);
 					continue;
 				}
 				const dim_t*const d=getent(&dims,eid);
 				if(!d){
-					fprintf(stderr,"WARNING: entity %hu has no dimensions\n",eid);
+					fprintf(stderr,"WARNING: entity %u has no dimensions\n",eid);
 					continue;
 				}
 				const double x=p.x;
@@ -202,7 +202,7 @@ static void mousin(
 					if(err){
 						fprintf(
 							stderr,
-							"WARNING: func failed for clickable entity %hu with error code %hhd\n",
+							"WARNING: func failed for clickable entity %u with error code %hhd\n",
 							eid,
 							err
 						);
@@ -243,10 +243,10 @@ static void keyin(
 		){
 	if(act==GLFW_PRESS){
 		if(win_seltxtbox){
-			const uint16_t stb=win_seltxtbox;
+			const uint32_t stb=win_seltxtbox;
 			txtbox_t*const t=getent(&txtboxes,stb);
 			if(!t){
-				fprintf(stderr,"ERROR: entity %hu has not txtbox\n",win_seltxtbox);
+				fprintf(stderr,"ERROR: entity %u has not txtbox\n",win_seltxtbox);
 			}
 			const uint64_t cp=t->cp;
 			if(key==GLFW_KEY_LEFT&&cp){
@@ -255,7 +255,7 @@ static void keyin(
 				if(rp){
 					rp->x-=.125;
 				}else{
-					fprintf(stderr,"WARNING: entity %hu has no position\n",t->crsr);
+					fprintf(stderr,"WARNING: entity %u has no position\n",t->crsr);
 				}
 			}else if(key==GLFW_KEY_RIGHT&&cp<t->str.nels){
 				t->cp=cp+1;
@@ -263,12 +263,12 @@ static void keyin(
 				if(rp){
 					rp->x+=.125;
 				}else{
-					fprintf(stderr,"WARNING: entity %hu has no position\n",t->crsr);
+					fprintf(stderr,"WARNING: entity %u has no position\n",t->crsr);
 				}
 			}else if(key==GLFW_KEY_BACKSPACE&&cp){
 				const uint64_t ncp=cp-1;
 				arrlst_del(&t->str,ncp);
-				uint16_t*chrs=t->chrs.buf;
+				uint32_t*chrs=t->chrs.buf;
 				delent(chrs[ncp]);
 				arrlst_del(&t->chrs,ncp);
 				if(ncp<t->chrs.nels){
@@ -277,7 +277,7 @@ static void keyin(
 						if(rp){
 							rp->prnt=chrs[ncp-1];
 						}else{
-							fprintf(stderr,"WARNING: entity %hu has no position\n",chrs[ncp]);
+							fprintf(stderr,"WARNING: entity %u has no position\n",chrs[ncp]);
 						}
 					}else{
 						relpos_t*const rp=getent(&relposes,*chrs);
@@ -286,7 +286,7 @@ static void keyin(
 							rp->x=TXTBXSTRT;
 							rp->z=-.5;
 						}else{
-							fprintf(stderr,"WARNING: entity %hu has no position\n",*chrs);
+							fprintf(stderr,"WARNING: entity %u has no position\n",*chrs);
 						}
 					}
 				}
@@ -294,12 +294,12 @@ static void keyin(
 				if(rp){
 					rp->x-=.125;
 				}else{
-					fprintf(stderr,"WARNING: entity %hu has no position\n",t->crsr);
+					fprintf(stderr,"WARNING: entity %u has no position\n",t->crsr);
 				}
 				t->cp=ncp;
 			}else if(key==GLFW_KEY_DELETE&&cp<=t->str.nels){
 				arrlst_del(&t->str,cp);
-				uint16_t*chrs=t->chrs.buf;
+				uint32_t*chrs=t->chrs.buf;
 				delent(chrs[cp]);
 				arrlst_del(&t->chrs,cp);
 				if(cp<t->chrs.nels){
@@ -308,7 +308,7 @@ static void keyin(
 						if(rp){
 							rp->prnt=chrs[cp-1];
 						}else{
-							fprintf(stderr,"WARNING: entity %hu has no position\n",*chrs);
+							fprintf(stderr,"WARNING: entity %u has no position\n",*chrs);
 						}
 					}else{
 						relpos_t*const rp=getent(&relposes,*chrs);
@@ -317,7 +317,7 @@ static void keyin(
 							rp->x=TXTBXSTRT;
 							rp->z=-.5;
 						}else{
-							fprintf(stderr,"WARNING: entity %hu has no position\n",*chrs);
+							fprintf(stderr,"WARNING: entity %u has no position\n",*chrs);
 						}
 					}
 				}
@@ -332,7 +332,7 @@ static void keyin(
 				if(err){
 					fprintf(
 						stderr,
-						"WARNING: txtbox func in entity %hu failed with error %hhi\n",
+						"WARNING: txtbox func in entity %u failed with error %hhi\n",
 						stb,
 						err
 					);
@@ -357,7 +357,7 @@ static void keyin(
 						win_clkoff=(int8_t(*)(int64_t,float,float))unit_move;
 						win_clkoffparam=unit_sel;
 						win_rclk=(int8_t(*)(int64_t,float,float))exitmode;
-						const uint16_t sel=unit_sel;
+						const uint32_t sel=unit_sel;
 						win_rclkparam=sel;
 						const udata_t*const udata=getent(&udatas,sel);
 						if(udata){
@@ -368,10 +368,10 @@ static void keyin(
 								col->b=1;
 								col->a=1;
 							}else{
-								fprintf(stderr,"WARNING: entity %hu has no color\n",udata->arr);
+								fprintf(stderr,"WARNING: entity %u has no color\n",udata->arr);
 							}
 						}else{
-							fprintf(stderr,"WARNING: entity %hu has no udata\n",unit_sel);
+							fprintf(stderr,"WARNING: entity %u has no udata\n",unit_sel);
 						}
 					}
 					return;
@@ -385,7 +385,7 @@ static void keyin(
 						win_inmode=INMODE_FIRE;
 						win_clkoff=(int8_t(*)(int64_t,float,float))fire;
 						win_rclk=(int8_t(*)(int64_t,float,float))exitmode;
-						const uint16_t sel=unit_sel;
+						const uint32_t sel=unit_sel;
 						win_rclkparam=sel;
 						const udata_t*const udata=getent(&udatas,sel);
 						if(udata){
@@ -396,7 +396,7 @@ static void keyin(
 								col->b=0;
 								col->a=1;
 							}else{
-								fprintf(stderr,"WARNING: entity %hu has no color\n",udata->arr);
+								fprintf(stderr,"WARNING: entity %u has no color\n",udata->arr);
 							}
 							lnklst_t*map[8]={};
 							hshmp_t hshmp={
@@ -423,7 +423,7 @@ static void keyin(
 							unit_aoes.buf=malloc(16);
 							unit_aoes.nels=0;
 							unit_aoes.bs=16;
-							uint16_t eid=neweid;
+							uint32_t eid=neweid;
 							for(
 									const lnklst_t*const*mi=(const lnklst_t**)map,
 									*const*const __restrict end=mi+sizeof(map)/8;
@@ -451,7 +451,7 @@ static void keyin(
 							}
 							neweid=eid;
 						}else{
-							fprintf(stderr,"WARNING: entity %hu has no udata\n",unit_sel);
+							fprintf(stderr,"WARNING: entity %u has no udata\n",unit_sel);
 						}
 					}
 					return;
@@ -470,7 +470,7 @@ static void keyin(
 								delent(win_frftbtn);
 								win_frftbtn=0;
 							}else{
-								const uint16_t eid=neweid;
+								const uint32_t eid=neweid;
 								const scrnpos_t pos={
 									.eid=eid,
 									.xancr=XANCR_CENT,
@@ -528,7 +528,7 @@ static void hndlerr(const int32_t code,const char*const __restrict descript){
 }
 static void addchr(
 		txtbox_t*const tb,
-		const uint16_t eid,
+		const uint32_t eid,
 		const uint32_t c,
 		const uint64_t t,
 		const uint64_t cp
@@ -536,7 +536,7 @@ static void addchr(
 	if(tb->acs[c]){
 		const char c8=c;
 		arrlst_insrt(&tb->str,&c8,cp);
-		const uint16_t neid=neweid;
+		const uint32_t neid=neweid;
 		arrlst_insrt(&tb->chrs,&neid,cp);
 		const dim_t dim={
 			.eid=neid,
@@ -549,7 +549,7 @@ static void addchr(
 			.tex=t,
 		};
 		arrlst_add(&texes,&tex);
-		const uint16_t*const chrs=tb->chrs.buf;
+		const uint32_t*const chrs=tb->chrs.buf;
 		if(cp){
 			const relpos_t rp={
 				.eid=neid,
@@ -572,7 +572,7 @@ static void addchr(
 				rp->prnt=neid;
 				rp->z=0;
 			}else{
-				fprintf(stderr,"WARNING: entity %hu has no position\n",chrs[cp+1]);
+				fprintf(stderr,"WARNING: entity %u has no position\n",chrs[cp+1]);
 			}
 		}
 		neweid=neid+1;
@@ -581,11 +581,11 @@ static void addchr(
 		if(rp){
 			rp->x+=.125;
 		}else{
-			fprintf(stderr,"WARNING: entity %hu has no position\n",tb->crsr);
+			fprintf(stderr,"WARNING: entity %u has no position\n",tb->crsr);
 		}
 	}
 }
-static int8_t exitmode(const uint16_t eid){
+static int8_t exitmode(const uint32_t eid){
 	if(eid){
 		win_clkoff=(int8_t(*)(int64_t,float,float))unit_deselct;
 		win_rclk=(int8_t(*)(int64_t,float,float))unit_move;
@@ -595,15 +595,15 @@ static int8_t exitmode(const uint16_t eid){
 			if(col){
 				col->a=0;
 			}else{
-				fprintf(stderr,"WARNING: entity %hu has no color\n",udata->arr);
+				fprintf(stderr,"WARNING: entity %u has no color\n",udata->arr);
 			}
 		}else{
-			fprintf(stderr,"WARNING: entity %hu has no color\n",eid);
+			fprintf(stderr,"WARNING: entity %u has no color\n",eid);
 		}
 		const uint64_t naoes=unit_aoes.nels;
 		if(naoes){
-			const uint16_t*const ab=unit_aoes.buf;
-			for(const uint16_t*i=ab,*const __restrict end=i+naoes;i<end;i++){
+			const uint32_t*const ab=unit_aoes.buf;
+			for(const uint32_t*i=ab,*const __restrict end=i+naoes;i<end;i++){
 				delent(*i);
 			}
 			free((void*)ab);
@@ -623,16 +623,16 @@ static int8_t exitmode(const uint16_t eid){
 }
 static int8_t fire(const float mx,const float my){
 	for(const udata_t*i=udatas.buf,*const __restrict end=i+udatas.nels;i<end;i++){
-		const uint16_t eid=i->eid;
+		const uint32_t eid=i->eid;
 		int8_t err;
 		const posn_t p=getposn(eid,&err);
 		if(err){
-			fprintf(stderr,"WARNING: entity %hu has no position\n",eid);
+			fprintf(stderr,"WARNING: entity %u has no position\n",eid);
 			continue;
 		}
 		const dim_t*const d=getent(&dims,eid);
 		if(!d){
-			fprintf(stderr,"WARNING: entity %hu has no dimensions\n",eid);
+			fprintf(stderr,"WARNING: entity %u has no dimensions\n",eid);
 			continue;
 		}
 		const float x=p.x;

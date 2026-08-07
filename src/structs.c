@@ -40,9 +40,9 @@ int8_t arrlst_insrt(
 		memcpy(tmp,b,idxes);
 		void*const newp=tmp+idxes;
 		memcpy(newp,new,es);
-		memcpy(newp+es,b+idxes,aftridx);
+		memcpy(newp+es,bpidxes,aftridx);
 		free(b);
-		arr->buf=b;
+		arr->buf=tmp;
 		arr->bs=ns;
 	}else{
 		memmove(bpidxes+es,bpidxes,aftridx);

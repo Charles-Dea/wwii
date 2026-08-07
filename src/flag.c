@@ -6,7 +6,7 @@
 #define FLGHGHT .1
 #define FLGCOL .75
 void mkflag(const float x,const float y,const float rad,const bool ald){
-	const uint16_t eid=neweid;
+	const uint32_t eid=neweid;
 	const pos_t pos={
 		.eid=eid,
 		.x=x,
@@ -48,16 +48,16 @@ void flag_update(){
 	flag_t*fi=flags.buf;
 	const flag_t*const __restrict fend=fi+flags.nels;
 	for(;fi<fend;fi++){
-		const uint16_t flag=fi->eid;
+		const uint32_t flag=fi->eid;
 		int8_t err;
 		const posn_t fp=getposn(flag,&err);
 		if(err){
-			fprintf(stderr,"WARNING: entity %hu has no position\n",flag);
+			fprintf(stderr,"WARNING: entity %u has no position\n",flag);
 			continue;
 		}
 		const ring_t*const ring=getent(&rings,flag);
 		if(!ring){
-			fprintf(stderr,"WARNING: entity %hu has no ring\n",flag);
+			fprintf(stderr,"WARNING: entity %u has no ring\n",flag);
 			continue;
 		}
 		const float rad=ring->r;
@@ -73,7 +73,7 @@ void flag_update(){
 			}
 			const posn_t up=getposn(ui->eid,&err);
 			if(err){
-				fprintf(stderr,"WARNING: entity %hu has no position\n",ui->eid);
+				fprintf(stderr,"WARNING: entity %u has no position\n",ui->eid);
 				continue;
 			}
 			const float dx=up.x-fp.x;
@@ -99,14 +99,14 @@ void flag_update(){
 				if(tex){
 					tex->tex=TEX_GERMFLAG;
 				}else{
-					fprintf(stderr,"WARNING: entity %hu has no texture\n",flag);
+					fprintf(stderr,"WARNING: entity %u has no texture\n",flag);
 				}
 				col_t*const col=getent(&cols,flag);
 				if(col){
 					col->r=FLGCOL;
 					col->b=0;
 				}else{
-					fprintf(stderr,"WARNING: entity %hu has no color\n",flag);
+					fprintf(stderr,"WARNING: entity %u has no color\n",flag);
 				}
 			}
 		}else if((prsnc&1)&&(~prsnc&2)){
@@ -115,14 +115,14 @@ void flag_update(){
 			if(tex){
 				tex->tex=TEX_USFLAG;
 			}else{
-				fprintf(stderr,"WARNING: entity %hu has no texture\n",flag);
+				fprintf(stderr,"WARNING: entity %u has no texture\n",flag);
 			}
 			col_t*const col=getent(&cols,flag);
 			if(col){
 				col->r=0;
 				col->b=FLGCOL;
 			}else{
-				fprintf(stderr,"WARNING: entity %hu has no color\n",flag);
+				fprintf(stderr,"WARNING: entity %u has no color\n",flag);
 			}
 		}
 	}

@@ -11,7 +11,7 @@ enum{
 	SCENE_ENDSCRN,
 };
 extern uint8_t menu_scene;
-extern uint16_t menu_nxtrn;
+extern uint32_t menu_nxtrn;
 void menu_main(void);
 void menu_strtgm(void);
 void menu_endscrn(bool);

@@ -6,9 +6,9 @@ void net_init(void);
 int8_t net_strthst(void);
 int8_t net_join(arrlst_t*__restrict);
 void net_lstn(void);
-void net_move(uint16_t,float,float);
-void net_dstr(uint16_t);
-int8_t net_dmg(uint16_t,const uint64_t*__restrict,uint64_t,double);
+void net_move(uint32_t,float,float);
+void net_dstr(uint32_t);
+int8_t net_dmg(uint32_t,const uint64_t*__restrict,uint64_t,double);
 void net_endtrn(void);
 int8_t net_dscnct(bool);
 #endif
