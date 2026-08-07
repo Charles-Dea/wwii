@@ -2,3 +2,7 @@ wwii
 .ccls*
 out
 build/*
+cmake_install.cmake
+CMakeFiles
+build.ninja
+CMakeCache.txt
