@@ -103,7 +103,7 @@ static void mousin(
 								default:
 									fprintf(
 										stderr,
-										"WARNING: entity hu has invalid xanchor %hhu",
+										"WARNING: entity %hu has invalid xanchor %hhu",
 										eid,
 										sp->xancr
 									);
